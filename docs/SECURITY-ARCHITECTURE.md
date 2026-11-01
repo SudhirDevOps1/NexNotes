@@ -19,8 +19,8 @@ Threat model: hostile network, shared/self-hosted server, other browser tabs —
 |---|---|---|---|
 | E2E note vault | AES-256-GCM | PBKDF2-SHA256 (310k it) over account password | browser (WebCrypto) |
 | Note protection | AES-256-GCM | PBKDF2 over `noteId + note-password` | browser |
-| Files | same vault key | browser | |
-| Integration keys | AES-GCM with vault key (optional) | browser (device-local storage) |
+| Files | — | same vault key | browser |
+| Integration keys | — | AES-GCM with vault key (optional) | browser (device-local storage) |
 | Session | JWT HS256 | `AUTH_SECRET` | server |
 | API tokens | SHA-256 (hash-only storage) | — | server |
 | Passwords / backup codes | bcrypt | — | server |
