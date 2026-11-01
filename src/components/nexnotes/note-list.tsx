@@ -353,10 +353,13 @@ export function NoteList({ onOpenNav }: { onOpenNav?: () => void }) {
         </div>
       )}
 
+      {/* min-h-0: without it a long list stretches this box past the shell
+       * (flex min-height:auto) and overflow-clip silently hides the tail —
+       * the "can't scroll the notes list" bug */}
       {view.kind === "files" ? (
         <FilesPane />
       ) : (
-        <ScrollArea className="flex-1 nx-scroll">
+        <ScrollArea className="flex-1 min-h-0 nx-scroll">
           {/* keyed by view/query/sort so the stagger entrance replays on view changes */}
           <div
             key={`${view.kind}|${view.id ?? ""}|${query}|${sort.by}|${sort.dir}`}
