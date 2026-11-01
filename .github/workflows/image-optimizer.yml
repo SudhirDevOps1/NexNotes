@@ -40,6 +40,10 @@ jobs:
         run: bun scripts/optimize-images.mjs
 
       - name: Open PR with optimized images (if any changed)
+        # Requires repo setting "Allow GitHub Actions to create and approve
+        # pull requests" (Settings → Actions → General). Until it is enabled
+        # this step logs the reason and skips — the scan itself stays green.
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "chore: losslessly recompress images"
