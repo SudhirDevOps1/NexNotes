@@ -1,0 +1,73 @@
+name: ZAP Nightly
+
+# OWASP ZAP baseline scan (DAST) — runs the real app and pokes at it the way
+# a lazy attacker would: missing security headers, cookies without flags,
+# exposed error details, and friends.
+#
+# Nightly + manual only. Findings are collected as artifacts and marked as
+# warnings; triage is a morning-coffee job, not an emergency.
+
+on:
+  schedule:
+    - cron: "45 1 * * *" # nightly 01:45 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: zap-nightly
+
+jobs:
+  zap:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: "file:${{ github.workspace }}/db/zap.db"
+      AUTH_SECRET: ci-zap-secret-not-for-production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install + build standalone bundle
+        run: |
+          bun install --frozen-lockfile
+          bunx prisma generate
+          mkdir -p db
+          bunx prisma db push --skip-generate
+          bunx next build
+          cp -r .next/static .next/standalone/.next/
+          cp -r public .next/standalone/
+
+      - name: Boot the app
+        run: |
+          bun .next/standalone/server.js &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3000/api/health >/dev/null 2>&1 && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:3000/api/health | grep -q '"ok":true'
+
+      # --network host: the ZAP container must reach the app on 127.0.0.1
+      - name: Run ZAP baseline scan
+        continue-on-error: true # advisory — report is the deliverable
+        run: |
+          docker run --rm --network host \
+            -v "$PWD:/zap/wrk:rw" \
+            -u root \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://127.0.0.1:3000 \
+            -c gen.conf -r zap-report.html -J zap-report.json -w zap-report.md \
+            -a -I -d || true
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: |
+            zap-report.html
+            zap-report.json
+            zap-report.md
+          retention-days: 30

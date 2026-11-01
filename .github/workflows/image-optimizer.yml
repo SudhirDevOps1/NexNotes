@@ -1,0 +1,56 @@
+name: Image Optimizer
+
+# Losslessly recompresses committed PNG/JPG assets (docs screenshots, icons).
+# If anything shrank by more than 2%, a PR is opened with the optimized
+# files so the change is reviewable — never a silent force-push.
+#
+# Manual runs and pushes that touch images.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "public/**"
+
+concurrency:
+  group: image-optimizer
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  optimize:
+    name: Recompress images
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (sharp)
+        run: bun install --frozen-lockfile
+
+      - name: Optimize images
+        run: bun scripts/optimize-images.mjs
+
+      - name: Open PR with optimized images (if any changed)
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: losslessly recompress images"
+          title: "chore: lossless image recompression"
+          body: |
+            Automated lossless recompression of committed images
+            (PNG zlib/effort tuning; JPEGs skipped — no lossless path).
+
+            Bytes before → after are listed in the job log. No visual change intended.
+          branch: chore/image-optimization
+          delete-branch: true
+          add-paths: |
+            docs/
+            public/

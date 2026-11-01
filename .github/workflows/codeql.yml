@@ -1,0 +1,48 @@
+name: CodeQL
+
+# Tier 3 — semantic security analysis. GitHub's CodeQL understands data flow,
+# so it catches things grep never will: unsanitized HTML sinks, SQL/format
+# injection paths, prototype pollution gadgets. Results land in the
+# Security tab → Code scanning.
+#
+# javascript-typescript covers both the Next.js app and the API routes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1" # Mondays 04:17 UTC — off the busy window on purpose
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      security-events: write # upload SARIF
+      packages: read
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended # deeper than the default suite
+          # build mode "none" — Next.js source is analyzed without compiling,
+          # which keeps this fast and immune to build quirks.
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"

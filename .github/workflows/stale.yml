@@ -1,0 +1,39 @@
+name: Stale
+
+# Keeps the issue/PR backlog alive. Items get marked stale after 30 days of
+# silence and close 14 days later. Anything labelled keep, pinned, security
+# or roadmap is exempt, and maintainers' own activity counts — the point is
+# to surface dead threads, not to bury work.
+
+on:
+  schedule:
+    - cron: "12 2 * * *" # daily
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 30
+          days-before-close: 14
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: keep,pinned,security,roadmap
+          exempt-pr-labels: keep,pinned,security
+          exempt-all-assignees: true
+          stale-issue-message: >
+            This issue has been quiet for 30 days. It will be closed in 14 days
+            if there is no further activity — drop a comment (even "still
+            relevant") to keep it open.
+          stale-pr-message: >
+            This PR has been quiet for 30 days. Rebase and comment to revive it,
+            or close it if the work moved elsewhere.
+          close-issue-message: "Closed for inactivity — reopen any time with more context."
+          operations-per-run: 60
