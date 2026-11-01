@@ -1,0 +1,38 @@
+# NexNotes — deny-all whitelist (keeps the GitHub repo clean)
+/*
+
+# ── allow project source ──
+!/src/
+!/prisma/
+!/public/
+!/docs/
+!/scripts/
+!/.github/
+
+# ── allow root config files ──
+!/.gitignore
+!/.dockerignore
+!/.env.example
+!/.npmrc
+!/package.json
+!/bun.lock
+!/next.config.ts
+!/tsconfig.json
+!/postcss.config.mjs
+!/eslint.config.mjs
+!/components.json
+!/next-env.d.ts
+!/README.md
+!/LICENSE
+!/SECURITY.md
+!/CHANGELOG.md
+!/CONTRIBUTING.md
+!/CODE_OF_CONDUCT.md
+!/PLAN.md
+!/Dockerfile
+!/docker-compose.yml
+
+# ── inside allowed dirs, still block junk ──
+**/.DS_Store
+*.log
+src/**/*.tsbuildinfo

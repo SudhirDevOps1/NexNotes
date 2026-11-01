@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+db
+*.db
+.zscripts
+examples
+skills
+download
+upload
+docs/screenshots
+npm-debug.log*
+Dockerfile
+docker-compose.yml
