@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install & build
+        run: |
+          bun install --frozen-lockfile
+          bunx prisma generate
+          bunx next build
+        env:
+          DATABASE_URL: "file:./db/custom.db"
+          AUTH_SECRET: release-build-secret
+
+      - name: Zip source
+        run: git archive --format=zip --prefix=nexnotes/ -o /tmp/nexnotes-${{ github.ref_name }}.zip HEAD
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: /tmp/nexnotes-${{ github.ref_name }}.zip

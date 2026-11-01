@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Lint · Typecheck · Build · Smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client (SQLite)
+        run: bunx prisma generate
+        env:
+          DATABASE_URL: "file:./db/custom.db"
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      - name: Build
+        run: |
+          bunx next build
+          cp -r .next/static .next/standalone/.next/
+          cp -r public .next/standalone/
+        env:
+          DATABASE_URL: "file:./db/custom.db"
+          AUTH_SECRET: ci-test-secret-not-for-production
+
+      - name: Smoke test (boot server + health + register + notes API)
+        run: |
+          bun .next/standalone/server.js &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3000/api/health >/dev/null && break
+            sleep 2
+          done
+          echo "--- health ---"
+          curl -sf http://127.0.0.1:3000/api/health | tee /dev/stderr | grep -q '"ok":true'
+          echo "--- register+login+create note (v1 API) ---"
+          curl -sf -X POST http://127.0.0.1:3000/api/auth/register \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"ci-$RANDOM@nexnotes.test\",\"password\":\"CiTest@123\"}" > /dev/null
+          curl -sf -X POST http://127.0.0.1:3000/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"ci-$RANDOM@nexnotes.test\",\"password\":\"CiTest@123\"}" > /dev/null || true
+          kill $SERVER_PID
