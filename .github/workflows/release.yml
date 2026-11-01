@@ -238,8 +238,10 @@ jobs:
           Expand-Archive dist/nexnotes-v$ver-windows-x64.zip -DestinationPath C:\nexnotes-pkg
           $src = (Get-ChildItem C:\nexnotes-pkg -Directory | Select-Object -First 1).FullName
           # every define goes in quotes — bare -DX=$var tokens reached makensis
-          # unexpanded on the runner (PS passed the literal `$ver`)
-          & $makensis "-DVERSION=$ver" "-DSRCDIR=$src" "-DOUTFILE=dist\nexnotes-v$ver-windows-x64-setup.exe" "scripts/installer.nsi"
+          # unexpanded on the runner (PS passed the literal `$ver`). OUTFILE must
+          # be ABSOLUTE too: makensis resolves a relative OutFile against the
+          # script's own folder (scripts\dist\... — which does not exist).
+          & $makensis "-DVERSION=$ver" "-DSRCDIR=$src" "-DOUTFILE=$PWD\dist\nexnotes-v$ver-windows-x64-setup.exe" "scripts/installer.nsi"
           if ($LASTEXITCODE -ne 0) { throw "makensis exited with $LASTEXITCODE" }
           if (-not (Test-Path "dist\nexnotes-v$ver-windows-x64-setup.exe")) { throw "makensis produced no installer" }
           Write-Host "installer built: nexnotes-v$ver-windows-x64-setup.exe"
