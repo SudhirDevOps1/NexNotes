@@ -8,18 +8,22 @@
 !/docs/
 !/scripts/
 !/.github/
+!/tests/
 
 # ── allow root config files ──
 !/.gitignore
 !/.dockerignore
 !/.env.example
 !/.npmrc
+!/.gitleaksignore
 !/package.json
 !/bun.lock
 !/next.config.ts
 !/tsconfig.json
 !/postcss.config.mjs
 !/eslint.config.mjs
+!/vitest.config.ts
+!/playwright.config.ts
 !/components.json
 !/next-env.d.ts
 !/README.md
@@ -36,3 +40,7 @@
 **/.DS_Store
 *.log
 src/**/*.tsbuildinfo
+tests/**/node_modules
+test-results/
+playwright-report/
+coverage/

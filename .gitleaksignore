@@ -1,0 +1,10 @@
+# False positives — reviewed by hand, NOT secrets.
+#
+# These three hits are placeholder curl examples shown in the UI
+# (Settings → API → "Example requests"). The token shown is literally
+# "nx_YOUR_TOKEN"; there is no credential anywhere in that file.
+# Fingerprints pinned per gitleaks docs (.gitleaksignore format:
+# commit:file:rule:line).
+6d330703d7bd11f43da5acc4b5a49a269dc7bf78:src/components/nexnotes/api-integrations.tsx:curl-auth-header:165
+6d330703d7bd11f43da5acc4b5a49a269dc7bf78:src/components/nexnotes/api-integrations.tsx:curl-auth-header:168
+6d330703d7bd11f43da5acc4b5a49a269dc7bf78:src/components/nexnotes/api-integrations.tsx:curl-auth-header:171
