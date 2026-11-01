@@ -314,6 +314,8 @@ jobs:
       - name: Upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # no checkout in this job — gh needs GH_REPO to know where to look
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release-please.outputs.tag_name || github.ref_name }}
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || \
