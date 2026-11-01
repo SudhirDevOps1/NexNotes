@@ -86,7 +86,8 @@ if exist "%~dp0bin\node.exe" (set "NODE_EXE=%~dp0bin\node.exe") else (
   where node >nul 2>nul || (echo Node.js 20+ is required. Download it from https://nodejs.org & pause & exit /b 1)
 )
 if not exist db mkdir db
-if not defined DATABASE_URL set "DATABASE_URL=file:%cd%\db\nexnotes.db"
+rem forward slashes — prisma's sqlite URL parser is happiest with them
+if not defined DATABASE_URL set "DATABASE_URL=file:%cd:\=/%/db/nexnotes.db"
 if not defined AUTH_SECRET (
   if exist .auth-secret (
     set /p AUTH_SECRET=<.auth-secret
@@ -164,6 +165,9 @@ async function main() {
   await writeFile(path.join(staging, "run.sh"), RUN_SH);
   await chmod(path.join(staging, "run.sh"), 0o755);
   await writeFile(path.join(staging, "run.cmd"), RUN_CMD);
+  // identical copy under the brand name — the Start-Menu shortcut and the
+  // installer smoke test point here (run.cmd stays for the portable zip users)
+  await writeFile(path.join(staging, "nexnotes.cmd"), RUN_CMD);
   await writeFile(path.join(staging, "INSTALL.txt"), INSTALL_TXT(version));
 
   process.chdir(out);
