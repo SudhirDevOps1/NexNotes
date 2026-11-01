@@ -28,6 +28,12 @@
 !/next-env.d.ts
 !/README.md
 !/LICENSE
+!/.coderabbit.yaml
+!/commitlint.config.mjs
+!/release-please-config.json
+!/.release-please-manifest.json
+!/.husky/
+/.husky/_/
 !/SECURITY.md
 !/CHANGELOG.md
 !/CONTRIBUTING.md

@@ -7,6 +7,11 @@
   self-hostable in one command, and **zero paid gates**. Think *"Vaultwarden for your notes."*
 
   [![CI](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml)
+  [![CodeQL](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/codeql.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/codeql.yml)
+  [![codecov](https://codecov.io/gh/SudhirDevOps1/NexNotes/graph/badge.svg)](https://codecov.io/gh/SudhirDevOps1/NexNotes)
+  [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/SudhirDevOps1/NexNotes/badge)](https://scorecard.dev/viewer/?uri=github.com/SudhirDevOps1/NexNotes)
+  [![Release](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/release.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/release.yml)
+  [![CodeRabbit Pull Request Reviews](https://img.shields.io/endpoint?url=https://coderabbit.ai/badge.svg)](https://coderabbit.ai)
   [![Docker](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)

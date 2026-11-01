@@ -1,0 +1,19 @@
+# CodeRabbit — AI code reviews on every pull request.
+# Config reference: https://docs.coderabbit.ai/reference/configuration
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill" # focused, high-signal comments — not nitpicks on every line
+  request_changes_workflow: false # review comments, never blocking change requests
+  high_level_summary: true # one-paragraph walkthrough on top of each PR
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+
+chat:
+  auto_reply: true
