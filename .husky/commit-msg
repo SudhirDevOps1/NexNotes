@@ -1,0 +1,2 @@
+# Conventional Commits (feat/fix/security/perf/...) — powers release-please.
+bunx commitlint --edit "$1"

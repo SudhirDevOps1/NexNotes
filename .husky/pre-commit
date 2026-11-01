@@ -1,0 +1,2 @@
+# Staged files only — full-repo lint belongs to CI, not to every commit.
+bunx lint-staged
