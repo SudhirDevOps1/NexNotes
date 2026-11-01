@@ -127,3 +127,39 @@ tooling, more features — nothing removed.
 - `/api/health` → 2.1.0; CHANGELOG entry; README + docs/FEATURES.md updated.
 **Verification gate:** tsc clean, headless-browser pass (desktop + 390px) on code fence, code note,
 find/replace, templates, share page; screenshots; conventional commit.
+
+---
+
+## 3. v2.1.1 — release train + desktop packaging (plan-first, 2026-11-01)
+
+**Goal:** turn the 12-workflow pipeline into a real release train and make the
+"desktop app" a set of actual shippable binaries built by GitHub CI/CD — nothing
+fake, every artifact boot-tested before it reaches a release page.
+
+### Work items
+1. **Scroll bug** — notes list / files pane / history dialog used `flex-1`
+   without `min-h-0`, so long lists stretched the shell and `overflow-clip`
+   silently hid the tail. One-line class fix per pane; verified in a real
+   browser (scrollTop 0 → 600 on the notes viewport).
+2. **release-please end-to-end** — manifest 2.1.0, config with
+   Features/Bug Fixes/Security/Performance sections, commitlint + husky guards
+   locally, quality-gate before the release job, artifacts build from the
+   exact created tag. CHANGELOG.md stays machine-generated.
+3. **Desktop artifacts** (all built by `release.yml`):
+   - `linux-x64.tar.gz` — portable, run.sh, boot-tested on the runner
+   - `linux-x64.AppImage` — self-contained (bundled node), FUSE-less boot-tested
+   - `windows-x64.zip` — portable, run.cmd, **bundled node.exe**, boot-tested on
+     windows-latest
+   - `windows-x64-setup.exe` — per-user NSIS installer, silent-installed and
+     boot-tested in CI before upload
+   - `SHA256SUMS.txt` for everything
+4. **Fresh-machine fix** — packages ship a schema-initialized `db/nexnotes.db`
+   (`prisma db push` at package time) because `generate` does not create
+   tables; AppRun/nexnotes.cmd seed the per-user data dir from it.
+5. **Windows engine parity** — `binaryTargets = ["native", "windows"]` so the
+   Linux-built bundle also carries the Windows query engine.
+
+### Verification gate
+lint · tsc · vitest (20 tests) · tarball boot (fresh env) · AppImage FUSE-less
+boot · zip/installer smoke on windows-latest · release PR merged → tag →
+artifacts attached to the GitHub Release.
