@@ -1,0 +1,163 @@
+// NexNotes — Postgres / Neon driver (serverless-ready)
+// Switch to this driver with:  node scripts/db-switch.mjs postgres "postgresql://user:pass@ep-xxx.neon.tech/nexnotes?sslmode=require"
+// Switch back with:            node scripts/db-switch.mjs sqlite
+// NOTE: kept in sync with schema.sqlite.prisma — same models, postgres types.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  passwordHash      String
+  encryptionEnabled Boolean  @default(false)
+  // v2.0 — account two-factor auth (TOTP, RFC 6238)
+  twofaSecret       String?
+  twofaEnabled      Boolean  @default(false)
+  twofaBackupHash   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  notes   Note[]
+  folders Folder[]
+  tags    Tag[]
+  files   FileItem[]
+  apiTokens ApiToken[]
+}
+
+model Folder {
+  id        String   @id
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  @@index([userId])
+}
+
+model Note {
+  id          String    @id
+  userId      String
+  title       String    @default("")
+  content     String    @default("") @db.Text
+  isEncrypted Boolean   @default(false)
+  folderId    String?
+  starred     Boolean   @default(false)
+  noteType    String    @default("markdown")
+  preventEdit Boolean   @default(false)
+  editorWidth String    @default("narrow")
+  locked      Boolean   @default(false)
+  lockHash    String?
+  conflictOf  String?
+  pinned      Boolean   @default(false)
+  archived    Boolean   @default(false)
+  trashed     Boolean   @default(false)
+  // v2.0 — optional read-only public share link
+  shareToken  String?   @unique
+  shareEnabled Boolean  @default(false)
+  trashedAt   DateTime?
+  createdAt   DateTime
+  updatedAt   DateTime
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder  Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags    NoteTag[]
+  history NoteHistory[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, trashed])
+  @@index([userId, conflictOf])
+}
+
+/// Version snapshots created automatically on pushed content changes.
+model NoteHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  noteId      String
+  title       String   @default("")
+  content     String   @default("") @db.Text
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([userId, noteId, createdAt])
+}
+
+/// Attachments kept in a per-account file library ("Files" view).
+model FileItem {
+  id          String   @id
+  userId      String
+  name        String
+  mime        String   @default("application/octet-stream")
+  size        Int      @default(0)
+  data        String   @default("") @db.Text
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Tag {
+  id        String   @id
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes NoteTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}
+
+model Deletion {
+  id        String   @id @default(cuid())
+  userId    String
+  itemType  String
+  itemId    String
+  deletedAt DateTime @default(now())
+
+  @@index([userId, deletedAt])
+}
+
+/// Personal API tokens for the REST API (/api/v1/*). Only the SHA-256 hash of
+/// the token is stored — the raw token is shown once at creation time.
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  prefix     String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

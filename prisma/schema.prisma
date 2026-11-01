@@ -1,0 +1,164 @@
+// NexNotes — clean-room local-first notes app
+// Active driver: SQLite (sandbox). For Neon/Postgres see prisma/schema.postgres.prisma
+// and scripts/db-switch.mjs
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  passwordHash      String
+  encryptionEnabled Boolean  @default(false)
+  // v2.0 — account two-factor auth (TOTP, RFC 6238). Secret is stored server-side
+  // (self-hosted instance); backup codes are stored only as bcrypt hashes.
+  twofaSecret       String?
+  twofaEnabled      Boolean  @default(false)
+  twofaBackupHash   String? // comma-joined bcrypt hashes
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  notes   Note[]
+  folders Folder[]
+  tags    Tag[]
+  files   FileItem[]
+  apiTokens ApiToken[]
+}
+
+model Folder {
+  id        String   @id // client-generated UUID (local-first)
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  @@index([userId])
+}
+
+model Note {
+  id          String    @id // client-generated UUID (local-first)
+  userId      String
+  title       String    @default("")
+  content     String    @default("") // plaintext, nxenc:v1 (E2E) or nxlock:v1 (note-password) ciphertext
+  isEncrypted Boolean   @default(false)
+  folderId    String?
+  starred     Boolean   @default(false)
+  noteType    String    @default("markdown") // markdown | plain | task | checklist | code
+  preventEdit Boolean   @default(false)
+  editorWidth String    @default("narrow") // narrow | medium | full
+  locked      Boolean   @default(false) // password-protected note (nxlock ciphertext)
+  lockHash    String?   // sha256 proof used to verify the note password locally
+  conflictOf  String?   // set when this note is a sync-conflict copy of another note
+  pinned      Boolean   @default(false)
+  archived    Boolean   @default(false)
+  trashed     Boolean   @default(false)
+  // v2.0 — optional read-only public share link (Listed-style publishing, self-hosted)
+  shareToken  String?   @unique
+  shareEnabled Boolean  @default(false)
+  trashedAt   DateTime?
+  createdAt   DateTime
+  updatedAt   DateTime // client-owned clock (LWW sync)
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder  Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags    NoteTag[]
+  history NoteHistory[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, trashed])
+  @@index([userId, conflictOf])
+}
+
+/// Version snapshots created automatically whenever a pushed edit changes the
+/// content of an existing note. Server stores ciphertext as-is (E2E safe).
+model NoteHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  noteId      String
+  title       String   @default("")
+  content     String   @default("")
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now()) // time the version was replaced
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([userId, noteId, createdAt])
+}
+
+/// Attachments kept in a per-account file library ("Files" view).
+model FileItem {
+  id          String   @id // client-generated UUID (local-first)
+  userId      String
+  name        String
+  mime        String   @default("application/octet-stream")
+  size        Int      @default(0)
+  data        String   @default("") // base64 bytes or nxenc ciphertext
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Tag {
+  id        String   @id // client-generated UUID (local-first)
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes NoteTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}
+
+/// Tombstones: lets other devices learn about deletions during incremental pull.
+model Deletion {
+  id        String   @id @default(cuid())
+  userId    String
+  itemType  String // note | folder | tag
+  itemId    String
+  deletedAt DateTime @default(now())
+
+  @@index([userId, deletedAt])
+}
+
+/// Personal API tokens for the REST API (/api/v1/*). Only the SHA-256 hash of
+/// the token is stored — the raw token is shown once at creation time.
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  prefix     String    // first chars for display, e.g. "nx_a1b2c3d4"
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
