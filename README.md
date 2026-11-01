@@ -1,16 +1,29 @@
-# NexNotes
+<div align="center">
+  <img src="docs/banner.png" alt="NexNotes — Local-first · End-to-end encrypted · Every premium feature free" width="100%"/>
 
-**The free, open-source, local-first notes app — every "premium" feature unlocked, forever.**
+  **The free, open-source, local-first notes app — every "premium" feature unlocked, forever.**
 
-A clean-room rewrite of what a modern notes app should be: end-to-end encrypted, offline-first,
-self-hostable in one command, and **zero paid gates**. Think *"Vaultwarden for your notes"*
+  A clean-room rewrite of what a modern notes app should be: end-to-end encrypted, offline-first,
+  self-hostable in one command, and **zero paid gates**. Think *"Vaultwarden for your notes."*
 
-![NexNotes](docs/screenshots/desktop-notes.png)
+  [![CI](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml)
+  [![Docker](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml)
+  [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+  [![Node](https://img.shields.io/badge/node-%E2%89%A520-339933)](package.json)
 
-[![CI](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml)
-[![Docker](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+  ### 🧪 Instant demo (built into every instance)
+
+  | Email | Password | Locked note password |
+  |---|---|---|
+  | `demo@nexnotes.app` | `NexNotes@2026` | `demo123` |
+
+  *The login screen has a one-click **Demo login** button — the account is auto-seeded with 20+
+  example notes covering every feature (code highlighting, spreadsheets, authenticator, HTML…).*
+
+  ![NexNotes main screen](docs/screenshots/desktop-notes.png)
+
+</div>
 
 ---
 
@@ -106,7 +119,8 @@ Details: [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md)
 
 ## 🗺️ Status
 
-- **v2.0.0** — see [`CHANGELOG.md`](CHANGELOG.md) and [`PLAN.md`](PLAN.md)
+- **v2.1.0** — Prism code experience: syntax highlighting (40+ languages), find & replace,
+  note templates, HTML export. See [`CHANGELOG.md`](CHANGELOG.md) and [`PLAN.md`](PLAN.md)
 - AGPL-3.0 — fork it, self-host it, ship it. Attribution appreciated, never stripped.
 
 ## 🤝 Contributing
