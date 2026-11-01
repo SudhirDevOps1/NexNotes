@@ -320,6 +320,7 @@ jobs:
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || \
             gh release create "$TAG" --generate-notes --title "NexNotes $TAG"
-          gh release upload "$TAG" dist/* --clobber
+          # nexnotes-* only — dist can carry build tooling that is not an asset
+          gh release upload "$TAG" dist/nexnotes-* --clobber
           echo "attached to $TAG:"
           ls -la dist/
