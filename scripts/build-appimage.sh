@@ -61,7 +61,15 @@ EOF
 
 cp "$ROOT/docs/logo.png" "$APPDIR/nexnotes.png"
 
+mkdir -p "$OUT"
+# canonicalize to an absolute path — the script cd's around while building and
+# a relative OUT (like the CI's plain "dist") breaks once we go one level deep
+OUT="$(cd "$OUT" && pwd)"
 cd "$OUT"
+# tooling lives in a hidden workdir — the upload step ships dist/nexnotes-*,
+# and a stray appimagetool-root/ directory in dist/ once broke `gh release
+# upload dist/*` on the tag build ("read dist/appimagetool-root: is a directory")
+mkdir -p .appimagetool && cd .appimagetool
 TOOL="appimagetool-x86_64.AppImage"
 if [ ! -f "$TOOL" ]; then
   curl -fsSL -o "$TOOL" \
@@ -71,5 +79,6 @@ chmod +x "$TOOL"
 rm -rf appimagetool-root
 ./"$TOOL" --appimage-extract >/dev/null
 mv squashfs-root appimagetool-root
-./appimagetool-root/AppRun --no-appstream "$APPDIR" "nexnotes-v${VERSION}-linux-x64.AppImage"
+cd "$OUT"
+./.appimagetool/appimagetool-root/AppRun --no-appstream "$APPDIR" "nexnotes-v${VERSION}-linux-x64.AppImage"
 echo "built: $OUT/nexnotes-v${VERSION}-linux-x64.AppImage"
