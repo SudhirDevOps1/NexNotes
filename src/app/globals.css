@@ -1,0 +1,370 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ============ NexNotes additions ============ */
+
+@layer base {
+  :root {
+    --nx-accent: #059669;
+  }
+}
+
+/* accent pickers set --primary/--ring inline; give links & chips the accent too */
+.nx-accent-text { color: var(--primary); }
+.nx-accent-bg { background-color: var(--primary); }
+
+/* markdown preview */
+.md-preview { line-height: 1.7; word-break: break-word; }
+.md-preview h1 { font-size: 1.6rem; font-weight: 700; margin: 1.2rem 0 0.6rem; }
+.md-preview h2 { font-size: 1.3rem; font-weight: 700; margin: 1.1rem 0 0.5rem; }
+.md-preview h3 { font-size: 1.12rem; font-weight: 600; margin: 1rem 0 0.4rem; }
+.md-preview p { margin: 0.55rem 0; }
+.md-preview ul { list-style: disc; padding-left: 1.4rem; margin: 0.5rem 0; }
+.md-preview ol { list-style: decimal; padding-left: 1.4rem; margin: 0.5rem 0; }
+.md-preview li { margin: 0.2rem 0; }
+.md-preview blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 0.9rem;
+  color: var(--muted-foreground);
+  margin: 0.7rem 0;
+}
+.md-preview code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.85em;
+  background: var(--accent);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+}
+.md-preview pre {
+  background: var(--accent);
+  border: 1px solid var(--border);
+  padding: 0.9rem 1rem;
+  border-radius: 0.6rem;
+  overflow-x: auto;
+  margin: 0.8rem 0;
+}
+.md-preview pre code { background: transparent; padding: 0; }
+.md-preview table { border-collapse: collapse; margin: 0.8rem 0; width: 100%; }
+.md-preview th, .md-preview td { border: 1px solid var(--border); padding: 0.4rem 0.7rem; text-align: left; }
+.md-preview th { background: var(--accent); font-weight: 600; }
+.md-preview a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.md-preview hr { border-color: var(--border); margin: 1.2rem 0; }
+.md-preview input[type="checkbox"] { accent-color: var(--primary); margin-right: 0.35rem; }
+
+/* thin scrollbars */
+.nx-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.nx-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+.nx-scroll::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+.nx-scroll { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+/* fade-in for panes */
+@keyframes nx-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.nx-fade { animation: nx-fade 0.18s ease-out; }
+
+/* mobile editor slide-in (list → editor) */
+@keyframes nx-slide-in { from { opacity: 0.4; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.nx-slide-in { animation: nx-slide-in 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* desktop sidebar re-entry when re-expanded (v1.3 collapsible sidebar) */
+@keyframes nx-sidebar-in { from { opacity: 0.35; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+.nx-sidebar-in { animation: nx-sidebar-in 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* hide scrollbars on horizontal chip/tool strips */
+.nx-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.nx-no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* editor typography driven by Settings → Editor typography */
+.nx-editor {
+  font-family: var(--nx-editor-font, var(--font-geist-sans), sans-serif);
+  font-size: var(--nx-editor-size, 15.5px);
+  line-height: var(--nx-editor-leading, 1.8);
+  caret-color: var(--primary);
+}
+.nx-editor::placeholder { color: var(--muted-foreground); opacity: 0.6; }
+
+/* zen mode — the writing surface is all that remains */
+.nx-zen { background: var(--background); }
+.nx-zen .nx-editor { font-size: calc(var(--nx-editor-size, 15.5px) + 1px); }
+
+/* print: only the note document */
+.nx-print-only { display: none; }
+@media print {
+  body * { visibility: hidden !important; }
+  .nx-print-only, .nx-print-only * { visibility: visible !important; }
+  .nx-print-only {
+    display: block !important;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 1.5rem;
+    color: #000;
+    background: #fff;
+  }
+  .nx-print-only h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 1rem; }
+}
+
+/* full-height app on mobile browsers (dynamic viewport) */
+html, body { height: 100%; }
+body { overscroll-behavior-y: none; }
+
+/* Radix ScrollArea renders its content wrapper as display:table, which lets
+ * nowrap (truncate) rows stretch the box horizontally — the note list then
+ * scrolls sideways and slides under the sidebar. Vertical-only lists must be
+ * block-level so truncation actually clips. */
+[data-radix-scroll-area-viewport] > div {
+  display: block !important;
+  min-width: 100% !important;
+  width: 100% !important;
+}
+
+/* ============ NexNotes v1.4 — motion suite ============ */
+
+/* staggered entrance for note rows / list cards (delay set inline per index) */
+@keyframes nx-item-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.995); }
+  to   { opacity: 1; transform: none; }
+}
+.nx-item-in { animation: nx-item-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+/* playful pop (copy ✓ morph, star bounce, badges) */
+@keyframes nx-pop {
+  0%   { transform: scale(0.55); opacity: 0.4; }
+  62%  { transform: scale(1.22); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.nx-pop { animation: nx-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* green success flash for a copied row */
+@keyframes nx-flash-ok {
+  0%   { background-color: color-mix(in oklab, var(--primary) 16%, transparent); border-color: var(--primary); }
+  100% { background-color: transparent; }
+}
+.nx-flash-ok { animation: nx-flash-ok 0.9s ease-out; }
+
+/* TOTP digit roll — each digit re-mounts when the code rotates */
+@keyframes nx-digit-roll {
+  from { opacity: 0; transform: translateY(-55%); filter: blur(2px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.nx-digit { display: inline-block; animation: nx-digit-roll 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* soft heartbeat — save indicator, urgent countdown, live badges */
+@keyframes nx-pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.82); }
+}
+.nx-pulse-soft { animation: nx-pulse-soft 1.6s ease-in-out infinite; }
+.nx-pulse-fast { animation: nx-pulse-soft 0.8s ease-in-out infinite; }
+
+/* grow-in for cards / dialogs / panels */
+@keyframes nx-grow-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.nx-grow-in { animation: nx-grow-in 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* slim rail that appears when the notes list is collapsed */
+@keyframes nx-rail-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+.nx-rail-in { animation: nx-rail-in 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* skeleton shimmer (boot / sync placeholders) */
+@keyframes nx-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+.nx-shimmer {
+  background: linear-gradient(100deg, var(--muted) 40%, color-mix(in oklab, var(--foreground) 7%, var(--muted)) 50%, var(--muted) 60%);
+  background-size: 200% 100%;
+  animation: nx-shimmer 1.4s linear infinite;
+}
+
+/* micro-interaction: everything with .nx-press squishes on click */
+.nx-press { transition: transform 0.12s ease, box-shadow 0.2s ease; }
+.nx-press:active { transform: scale(0.94); }
+
+/* note rows glide slightly toward the cursor */
+.nx-row { transition: background-color 0.15s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (hover: hover) {
+  .nx-row:hover { transform: translateX(3px); }
+}
+.nx-row:active { transform: translateX(1px) scale(0.995); }
+
+/* reading progress bar (editor) */
+.nx-progress-track { position: absolute; top: 0; left: 0; right: 0; height: 2.5px; z-index: 20; pointer-events: none; }
+.nx-progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), color-mix(in oklab, var(--primary) 55%, transparent)); border-radius: 999px; transition: width 0.18s ease-out; box-shadow: 0 0 8px color-mix(in oklab, var(--primary) 45%, transparent); }
+
+/* gentle float for empty states */
+@keyframes nx-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.nx-float { animation: nx-float 3.2s ease-in-out infinite; }
+
+/* respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  .nx-item-in, .nx-pop, .nx-flash-ok, .nx-digit, .nx-pulse-soft, .nx-pulse-fast,
+  .nx-grow-in, .nx-rail-in, .nx-shimmer, .nx-float {
+    animation: none !important;
+  }
+  .nx-row, .nx-row:hover, .nx-row:active, .nx-press:active { transform: none !important; }
+}
+
+/* v2.0 — wiki links inside markdown previews */
+.nx-wiki-link {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px dashed color-mix(in oklab, var(--primary) 55%, transparent);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  border-radius: 2px;
+}
+.nx-wiki-link:hover {
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  border-bottom-style: solid;
+}
+
+/* v2.0 — mdxeditor (WYSIWYG) integration with the app theme */
+.nx-mdx .mdxeditor {
+  --baseBg: var(--background);
+  --baseBgHover: var(--muted);
+  --baseBgActive: var(--muted);
+  --baseText: var(--foreground);
+  --accentBg: var(--primary);
+  --baseBorder: var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  border-radius: 0.5rem;
+  font-family: var(--nx-editor-font, inherit);
+}
+.nx-mdx .mdxeditor [data-toolbar-root="true"] {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.nx-mdx.dark .mdxeditor {
+  --baseBg: var(--background);
+  --baseBgHover: var(--muted);
+  --baseBgActive: var(--muted);
+  --baseText: var(--foreground);
+}
