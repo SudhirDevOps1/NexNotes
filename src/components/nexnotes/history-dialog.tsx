@@ -120,7 +120,8 @@ function VersionList({ noteId }: { noteId: string }) {
       </ScrollArea>
 
       {/* preview */}
-      <ScrollArea className="flex-1 border rounded-lg nx-scroll">
+      {/* min-h-0: cap the preview inside the dialog's flex row */}
+      <ScrollArea className="flex-1 min-h-0 border rounded-lg nx-scroll">
         <div className="p-4">
           {current && (
             <>

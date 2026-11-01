@@ -22,8 +22,10 @@ export function FilesPane() {
   const inputRef = useRef<HTMLInputElement>(null);
   const list = Object.values(files).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
+  // min-h-0 keeps the pane capped at the flex row height so the file
+  // list scrolls instead of stretching the shell
   return (
-    <ScrollArea className="flex-1 nx-scroll">
+    <ScrollArea className="flex-1 min-h-0 nx-scroll">
       <div className="p-3 space-y-2">
         <input
           ref={inputRef}
