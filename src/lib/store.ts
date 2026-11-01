@@ -148,7 +148,7 @@ interface AppActions {
   unlockVault: (password: string) => Promise<void>;
   exportJson: () => Promise<void>;
   exportMarkdown: () => Promise<void>;
-  exportNote: (id: string, format: "md" | "txt") => Promise<void>;
+  exportNote: (id: string, format: "md" | "txt" | "html") => Promise<void>;
   importJson: (file: File) => Promise<void>;
   importFiles: (files: File[]) => Promise<void>;
   importStandardNotes: (file: File) => Promise<{ imported: number; skippedEncrypted: number }>;
@@ -1421,6 +1421,18 @@ export const useApp = create<AppStore>((set, get) => ({
     const safe = title.replace(/[^\w\s-…]/g, "").trim().slice(0, 60).replace(/\s+/g, "-").toLowerCase() || "note";
     if (format === "txt") {
       downloadBlob(new Blob([content], { type: "text/plain" }), `${safe}.txt`);
+    } else if (format === "html") {
+      /* v2.1 — standalone styled HTML, rendered with the same sanitized
+       * markdown pipeline the app uses. Self-contained: no external requests. */
+      const [{ createElement }, { renderToStaticMarkup }, editorMod] = await Promise.all([
+        import("react"),
+        import("react-dom/server"),
+        import("@/components/nexnotes/editor"),
+      ]);
+      const inner = renderToStaticMarkup(createElement(editorMod.Markdown, null, noteToMarkdown(content)));
+      const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title><style>body{max-width:760px;margin:0 auto;padding:48px 20px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;color:#18181b;line-height:1.75}h1,h2,h3{line-height:1.25}code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:.85em;background:#f4f4f5;padding:.15rem .35rem;border-radius:.35rem}pre{display:table;width:100%;background:#fafafa;border:1px solid #e4e4e7;border-radius:8px;padding:12px;overflow-x:auto}pre>div{display:table-row}pre>div>span:last-child{display:table-cell;white-space:pre}blockquote{border-left:3px solid #e4e4e7;margin:0;padding-left:14px;color:#52525b}table{border-collapse:collapse;width:100%}th,td{border:1px solid #e4e4e7;padding:6px 10px;text-align:left}th{background:#fafafa}img{max-width:100%}footer{margin-top:48px;padding-top:14px;border-top:1px solid #e4e4e7;font-size:12px;color:#71717a}a{color:#18181b}@media print{body{padding:0}}</style></head><body><h1>${esc(title)}</h1>${inner}<footer>Exported from NexNotes — local-first, E2E-encrypted notes. ${new Date().toLocaleDateString()}</footer></body></html>`;
+      downloadBlob(new Blob([doc], { type: "text/html;charset=utf-8" }), `${safe}.html`);
     } else {
       downloadBlob(new Blob([`# ${title}\n\n${noteToMarkdown(content)}`], { type: "text/markdown" }), `${safe}.md`);
     }

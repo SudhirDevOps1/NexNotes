@@ -300,6 +300,46 @@ const DEMO_AUTH = [
   "NexNotes (demo): GEZDGNBVGY3TQOJQ",
 ].join("\n");
 
+const V21_CODE_TOUR = `# Code — Prism syntax highlighting ✨
+
+v2.1 highlights code everywhere: markdown fences, **code notes** and public share
+pages — 40+ languages, line numbers, word-wrap and one-click copy. Try it:
+
+\`\`\`prisma
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @updatedAt
+}
+\`\`\`
+
+\`\`\`ts
+// TypeScript — hover the header buttons: wrap · line numbers · copy
+export function greet(name: string): string {
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
+
+\`\`\`python
+def quicksort(xs: list[int]) -> list[int]:
+    if len(xs) <= 1:
+        return xs
+    pivot, *rest = xs
+    lo = [x for x in rest if x < pivot]
+    hi = [x for x in rest if x >= pivot]
+    return quicksort(lo) + [pivot] + quicksort(hi)
+\`\`\`
+
+\`\`\`bash
+# self-host in one line
+docker compose up -d
+\`\`\`
+
+> Unlabeled fences are **auto-detected**. Code notes get a language dropdown in
+> the preview header — pick "Prisma Schema" to see this grammar light up.
+`;
+
 const V2_TOUR = `# Welcome to NexNotes 2.0 — every premium tool, free 🎉
 
 This release completes the "all paid features, free" promise. Try everything:
@@ -354,6 +394,7 @@ const NOTES: NoteSeed[] = [
   { id: "demo-note-19", title: "2FA codes (demo)", content: DEMO_AUTH, noteType: "authenticator", tags: ["getting-started"], ageDays: 1 },
   { id: "demo-note-20", title: "HTML demo — booking card", content: DEMO_HTML, noteType: "html", tags: ["markdown"], ageDays: 0 },
   { id: "demo-note-21", title: "Welcome to NexNotes 2.0", content: V2_TOUR, pinned: true, tags: ["getting-started"], ageDays: 0 },
+  { id: "demo-note-22", title: "Code demo — Prism highlighting ✨", content: V21_CODE_TOUR, tags: ["getting-started"], ageDays: 0 },
 ];
 
 async function linkTags(seed: NoteSeed) {

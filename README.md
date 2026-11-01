@@ -21,7 +21,7 @@ plus things it doesn't have. No accounts to rent, no upgrade walls, no telemetry
 
 | Standard Notes paid plan | NexNotes |
 |---|---|
-| Super notes (markdown, syntax, tables) | ✅ Markdown **+ KaTeX math + `[[wiki links]]` + backlinks** |
+| Super notes (markdown, syntax, tables) | ✅ Markdown **+ Prism syntax highlighting (40+ langs) + KaTeX math + `[[wiki links]]` + backlinks** |
 | All premium editors | ✅ Rich text (WYSIWYG), Markdown, Tasks, Checklists, Code, **Spreadsheets**, Authenticator, HTML pages |
 | Note history | ✅ Automatic version snapshots + restore |
 | Protected notes | ✅ Per-note passwords (AES-GCM ciphertext) |
@@ -34,6 +34,7 @@ plus things it doesn't have. No accounts to rent, no upgrade walls, no telemetry
 | REST API | ✅ `/api/v1/*` with personal bearer tokens (hash-only storage) |
 | — | ➕ **Batch operations** (select → tag / move / merge / export / trash) |
 | — | ➕ **Smart views** (saved searches) |
+| — | ➕ **Code, first-class** — Prism highlighting w/ copy·line-numbers·wrap, language picker, find & replace, templates, HTML export |
 | — | ➕ Integrations vault (Discord webhook, Telegram, GitHub… — Obsidian-style) |
 | — | ➕ Command palette, live stats, reading progress, zen mode, collapsible panels |
 | — | ➕ Import from Standard Notes (decrypted backups) |

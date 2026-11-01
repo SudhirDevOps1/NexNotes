@@ -88,3 +88,42 @@ Verified against live sources (standardnotes.com help/pricing pages, G2, communi
 2. Headless browser (desktop + 390 px): login (incl. 2FA flow), batch select→merge, smart view create+use, share link roundtrip in fresh context, wiki-link + backlinks, math render, richtext editor, auto-backup snapshot, theme presets.
 3. `curl /api/health` → `2.0.0`; `/api/v1/*` still 401/200 correctly.
 4. Screenshots refreshed into `docs/screenshots/`.
+
+---
+
+# v2.1 — "Prism code experience" plan (2026-11-01, additive-only)
+
+**User ask:** code syntax highlighting via Prism ("code ka syntax highlight prism se"), more code
+tooling, more features — nothing removed.
+
+### A. Prism syntax highlighting (everywhere code appears)
+- Deps: `prism-react-renderer` (Prism engine, React-native, no CDN) + `prismjs` grammars
+  (rust, csharp, java, kotlin, swift, php, ruby, dart, lua) + `prism-prisma` (`.prisma` schema).
+- `src/lib/prism-langs.ts`: client-only registry — attaches extra grammars to the bundled Prism.
+- `src/components/nexnotes/code-block.tsx`: shared `CodeBlock` —
+  language badge, one-click copy, line-number toggle, word-wrap toggle, oneLight/oneDark theme
+  that follows the app theme, `detectLang()` heuristic for unlabeled blocks.
+- Wired into: markdown preview code fences (`Markdown` in editor.tsx), code-note preview,
+  print document, and the public share page `/s/[token]` — all rendered through Prism now.
+
+### B. Code-note upgrades
+- Per-note language picker (40+ languages + Auto-detect) stored device-local
+  (`localStorage nx-codelangs` — privacy-first, no server round-trip).
+- Tab / Shift-Tab indent & dedent inside code notes; Tab in markdown notes continues to
+  indent list lines.
+
+### C. Find & Replace
+- Find bar gains a replace row: Replace (current match) + Replace All, live match counter kept.
+
+### D. Templates + HTML export
+- Note menu → "Insert template": Daily journal, Meeting notes, Bug report, Code review, README.
+- Note menu → Export: adds styled standalone **HTML** (rendered with the same sanitized
+  Markdown pipeline, self-contained file, no external requests).
+
+### E. Spelling toggle
+- `EditorPrefs.spell` (default on) + Settings → Appearance switch; applies to all note textareas.
+
+### F. Version + docs
+- `/api/health` → 2.1.0; CHANGELOG entry; README + docs/FEATURES.md updated.
+**Verification gate:** tsc clean, headless-browser pass (desktop + 390px) on code fence, code note,
+find/replace, templates, share page; screenshots; conventional commit.

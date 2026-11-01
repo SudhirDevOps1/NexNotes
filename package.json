@@ -65,7 +65,9 @@
     "next-auth": "^4.24.11",
     "next-intl": "^4.3.4",
     "next-themes": "^0.4.6",
+    "prism-react-renderer": "^2.4.1",
     "prisma": "^6.11.1",
+    "prismjs": "^1.30.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-day-picker": "^9.8.0",
@@ -93,6 +95,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^3.0.0",
+    "@types/prismjs": "^1.26.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "bun-types": "^1.3.4",
@@ -103,7 +106,7 @@
     "typescript": "^5"
   },
   "description": [
-    "NexNotes \u2014 free, open-source, local-first encrypted notes. Every premium feature free: rich text & markdown editors, wiki links, KaTeX math, 2FA, batch ops, smart views, share links, API, themes, auto-backup. SQLite & Neon Postgres."
+    "NexNotes — free, open-source, local-first encrypted notes. Every premium feature free: rich text & markdown editors, wiki links, KaTeX math, 2FA, batch ops, smart views, share links, API, themes, auto-backup. SQLite & Neon Postgres."
   ],
   "license": "AGPL-3.0-only",
   "repository": {

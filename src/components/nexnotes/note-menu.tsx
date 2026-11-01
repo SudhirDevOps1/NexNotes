@@ -6,7 +6,7 @@ import {
   Star, Pin, CopyPlus, Download, Archive, Trash2, MoreHorizontal, Lock,
   LockOpen, Check, RotateCw, Printer, ClipboardCopy, Columns2, Maximize,
   NotebookPen, ListTodo, ListChecks, Code, Type, Table2, Settings, Globe, Send,
-  Share2, Link2, Unlink, PenLine,
+  Share2, Link2, Unlink, PenLine, FilePlus2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useApp, type UiNote } from "@/lib/store";
 import type { EditorWidth, NoteType } from "@/lib/types";
+import { NOTE_TEMPLATES } from "@/lib/templates";
 import { loadIntegrations, sendNoteToDiscord } from "@/lib/integrations";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +40,7 @@ const WIDTH_LABELS: { value: EditorWidth; label: string }[] = [
 ];
 
 export function NoteMenu({
-  note, onFind, mode, onMode, zen, onZen, onPrint, onCopy,
+  note, onFind, mode, onMode, zen, onZen, onPrint, onCopy, onInsertTemplate,
 }: {
   note: UiNote;
   onFind: () => void;
@@ -49,6 +50,8 @@ export function NoteMenu({
   onZen: () => void;
   onPrint: () => void;
   onCopy: () => void;
+  /** v2.1 — templates (undefined when the note can't be edited) */
+  onInsertTemplate?: (md: string) => void;
 }) {
   const setHistory = useApp((s) => s.setHistory);
   const setSettings = useApp((s) => s.setSettings);
@@ -249,12 +252,33 @@ export function NoteMenu({
           <CopyPlus className="h-4 w-4" /> Duplicate
         </DropdownMenuItem>
 
+        {/* v2.1 — insert a template at the caret */}
+        {onInsertTemplate && !isTrashed && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <FilePlus2 className="h-4 w-4 mr-2" /> Insert template
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-60">
+              {NOTE_TEMPLATES.map((t) => (
+                <DropdownMenuItem key={t.id} onClick={() => onInsertTemplate(t.md)}>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex flex-col">
+                    <span>{t.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{t.hint}</span>
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
+
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Download className="h-4 w-4 mr-2" /> Export
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuItem onClick={() => void exportNote(note.id, "md")}>Markdown (.md)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void exportNote(note.id, "html")}>Web page (.html)</DropdownMenuItem>
             <DropdownMenuItem onClick={() => void exportNote(note.id, "txt")}>Plain text (.txt)</DropdownMenuItem>
             <DropdownMenuItem onClick={onPrint}>
               <Printer className="h-4 w-4" /> Print / PDF…

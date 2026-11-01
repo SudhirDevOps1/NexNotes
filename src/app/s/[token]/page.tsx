@@ -9,6 +9,7 @@ import rehypeKatex from "rehype-katex";
 import { ShieldCheck } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildHtmlDoc } from "@/components/nexnotes/editor";
+import { CodeBlock } from "@/components/nexnotes/code-block";
 
 export const dynamic = "force-dynamic";
 
@@ -118,14 +119,24 @@ export default async function SharePage({
                 style={{ height: "min(70vh, 720px)" }}
               />
             ) : note.noteType === "code" ? (
-              <pre className="rounded-lg border bg-muted/60 p-4 text-[13px] font-mono overflow-x-auto whitespace-pre-wrap">
-                <code>{note.content}</code>
-              </pre>
+              <CodeBlock code={note.content} maxHeight="min(70vh, 720px)" />
             ) : (
               <div className="md-preview text-[15px]">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkMath]}
                   rehypePlugins={[rehypeRaw, [rehypeSanitize, MD_SCHEMA], rehypeKatex]}
+                  components={{
+                    /* v2.1 — Prism-highlighted code fences on public pages */
+                    pre: ({ children }) => <>{children}</>,
+                    code: ({ className, children }) => {
+                      const text = String(children ?? "").replace(/\n$/, "");
+                      const m = /language-([\w+#-]+)/.exec(className ?? "");
+                      if (!m && !text.includes("\n")) {
+                        return <code className={className}>{children}</code>;
+                      }
+                      return <CodeBlock code={text} lang={m?.[1] ?? ""} />;
+                    },
+                  }}
                 >
                   {note.content}
                 </ReactMarkdown>

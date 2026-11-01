@@ -13,7 +13,7 @@ import {
   Folder as FolderIcon, Tag as TagIcon, RotateCcw, X, Check, Lock, LockOpen,
   Star, History, Search, ChevronUp, ChevronDown, Ban, ShieldCheck, Copy,
   Columns2, Maximize, Minimize, Printer, Bold, Italic, Code, Link2,
-  List, ListChecks, Quote, Heading1, Heading2, BookOpen,
+  List, ListChecks, Quote, Heading1, Heading2, BookOpen, Replace,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useApp, type UiNote } from "@/lib/store";
+import { loadPrefs } from "@/lib/prefs";
+import { CodeBlock, mdCodeComponents } from "./code-block";
 import { NoteMenu } from "./note-menu";
 import { SheetEditor, SheetPreview, sheetToMarkdown } from "./sheet-editor";
 import { TotpPreview } from "./totp";
@@ -61,14 +63,16 @@ export function preprocessWiki(md: string): string {
 }
 
 /** shared markdown renderer — sanitized inline HTML, GFM tables, KaTeX math,
- *  clickable [[wiki links]] (v2.0) */
-function Markdown({ children, onWiki }: { children: string; onWiki?: (title: string) => void }) {
+ *  clickable [[wiki links]] (v2.0), Prism code blocks (v2.1).
+ *  Exported for HTML export (store.ts renderToStaticMarkup). */
+export function Markdown({ children, onWiki }: { children: string; onWiki?: (title: string) => void }) {
   const withWiki = useMemo(() => preprocessWiki(children), [children]);
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeRaw, [rehypeSanitize, MD_HTML_SCHEMA], rehypeKatex]}
       components={{
+        ...mdCodeComponents(),
         a: ({ href, children: kids, ...props }) => {
           const wiki =
             typeof href === "string" && href.startsWith("nxwiki://")
@@ -209,6 +213,9 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
   /* v2.0 — backlinks + [[wiki-link autocomplete */
   const [showBacklinks, setShowBacklinks] = useState(false);
   const [wikiSug, setWikiSug] = useState<{ query: string; start: number; end: number; sel: number } | null>(null);
+  /* v2.1 — find & replace + spelling preference */
+  const [replaceText, setReplaceText] = useState("");
+  const [spell, setSpell] = useState(true);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const noteRef = useRef(note);
@@ -281,6 +288,14 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
     window.addEventListener("afterprint", done, { once: true });
     return () => window.removeEventListener("afterprint", done);
   }, [printDoc]);
+
+  // v2.1 — spelling preference follows Settings → Appearance live
+  useEffect(() => {
+    const sync = () => setSpell(loadPrefs().spell !== false);
+    sync();
+    window.addEventListener("nx-prefs-changed", sync);
+    return () => window.removeEventListener("nx-prefs-changed", sync);
+  }, []);
 
   const matches = useMemo(() => {
     if (!findQuery) return 0;
@@ -371,6 +386,54 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
     }
   }, [applyWrap, applyLinePrefix]);
 
+  function replaceOne() {
+    if (!findQuery || !matches) return;
+    const hay = contentDraft.toLowerCase();
+    const needle = findQuery.toLowerCase();
+    let pos = -1, k = 0, i = hay.indexOf(needle);
+    while (i !== -1) {
+      if (k === findIdx) { pos = i; break; }
+      k++; i = hay.indexOf(needle, i + needle.length);
+    }
+    if (pos < 0) { setFindIdx(0); return; }
+    setContentDraft(
+      contentDraft.slice(0, pos) + replaceText + contentDraft.slice(pos + findQuery.length),
+    );
+  }
+
+  function replaceAll() {
+    if (!findQuery) return;
+    const re = new RegExp(findQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    setContentDraft(contentDraft.replace(re, replaceText));
+  }
+
+  /* -------- v2.1 — Tab / Shift+Tab indent inside code & HTML notes -------- */
+  function indentCode(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    e.preventDefault();
+    const val = contentRef.current;
+    const s = ta.selectionStart, en = ta.selectionEnd;
+    const start = val.lastIndexOf("\n", s - 1) + 1;
+    const multi = val.slice(s, en).includes("\n");
+    const endIdx = val.indexOf("\n", en);
+    const blockEnd = endIdx === -1 ? val.length : endIdx;
+    if (e.shiftKey) {
+      const ded = val.slice(start, blockEnd).replace(/^[ \t]{1,2}/gm, "");
+      const caret = Math.max(start, s - (val.slice(start, s).length - val.slice(start, s).replace(/^[ \t]{1,2}/gm, "").length));
+      setContentDraft(val.slice(0, start) + ded + val.slice(blockEnd));
+      requestAnimationFrame(() => { ta.focus({ preventScroll: true }); ta.setSelectionRange(caret, caret); });
+    } else if (multi) {
+      const ind = val.slice(start, blockEnd).replace(/^/gm, "  ");
+      setContentDraft(val.slice(0, start) + ind + val.slice(blockEnd));
+      const lines = val.slice(start, en).split("\n").length;
+      requestAnimationFrame(() => { ta.focus({ preventScroll: true }); ta.setSelectionRange(s + 2, en + 2 * lines); });
+    } else {
+      setContentDraft(val.slice(0, s) + "  " + val.slice(en));
+      requestAnimationFrame(() => { ta.focus({ preventScroll: true }); ta.setSelectionRange(s + 2, s + 2); });
+    }
+  }
+
   function onContentKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     /* v2.0 — wiki autocomplete keys */
     if (wikiSug && wikiOptions.length > 0) {
@@ -394,6 +457,11 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
         setWikiSug(null);
         return;
       }
+    }
+    /* v2.1 — Tab/Shift+Tab indents code & HTML notes (wiki autocomplete wins first) */
+    if (e.key === "Tab" && (note.noteType === "code" || note.noteType === "html")) {
+      indentCode(e);
+      return;
     }
     if (!(e.ctrlKey || e.metaKey)) return;
     const k = e.key.toLowerCase();
@@ -496,6 +564,23 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
     });
   }
 
+  /* -------- v2.1 — insert a template at the caret (or append) -------- */
+  function insertTemplate(md: string) {
+    const ta = textareaRef.current;
+    if (ta && mode !== "preview") {
+      const s = ta.selectionStart ?? contentDraft.length;
+      const e = ta.selectionEnd ?? s;
+      const sep = s > 0 && contentDraft[s - 1] !== "\n" ? "\n" : "";
+      const next = contentDraft.slice(0, s) + sep + md + contentDraft.slice(e);
+      setContentDraft(next);
+      const caret = s + sep.length + md.length;
+      requestAnimationFrame(() => { ta.focus({ preventScroll: true }); ta.setSelectionRange(caret, caret); });
+    } else {
+      setContentDraft(contentDraft ? `${contentDraft}\n\n${md}` : md);
+      setMode("edit");
+    }
+  }
+
   function doPrint() {
     setPrintDoc({ title: titleDraft || "Untitled", content: contentDraft });
     setTimeout(() => window.print(), 120);
@@ -543,7 +628,7 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
           value={contentDraft}
           onChange={(e) => setContentDraft(e.target.value)}
           onKeyDown={onContentKeyDown}
-          placeholder="// code snippet…"
+          placeholder="// code snippet… — Tab indents, Shift+Tab dedents"
           disabled={readOnly}
           spellCheck={false}
           className="nx-editor min-h-[52vh] resize-none border-none shadow-none p-0 focus-visible:ring-0 bg-transparent font-mono"
@@ -557,6 +642,7 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
             onKeyDown={onContentKeyDown}
             placeholder={note.noteType === "plain" ? "Start writing…" : "Start writing… (Markdown supported — or use the toolbar). Type [[ to link a note."}
             disabled={readOnly}
+            spellCheck={spell}
             className="nx-editor min-h-[52vh] resize-none border-none shadow-none p-0 focus-visible:ring-0 bg-transparent"
           />
           {/* v2.0 — [[wiki-link autocomplete */}
@@ -743,6 +829,7 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
                   onZen={() => setZen(true)}
                   onPrint={doPrint}
                   onCopy={() => void copyNoteMarkdown(note.id)}
+                  onInsertTemplate={insertTemplate}
                 />
               </>
             )}
@@ -774,33 +861,53 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
           </Button>
         )}
 
-        {/* find bar */}
+        {/* find & replace bar (v2.1 — replace row added) */}
         {findOpen && mode !== "preview" && !zen && (
-          <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/40 shrink-0">
-            <Search className="h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              id="nx-find-input"
-              value={findQuery}
-              onChange={(e) => { setFindQuery(e.target.value); setFindIdx(0); }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); jumpToMatch(e.shiftKey ? -1 : 1); }
-                if (e.key === "Escape") { setFindOpen(false); setFindQuery(""); }
-              }}
-              placeholder="Find in note…"
-              className="h-7 text-xs bg-background"
-            />
-            <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
-              {findQuery ? `${matches ? findIdx + 1 : 0}/${matches}` : ""}
-            </span>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => jumpToMatch(-1)} disabled={!matches} aria-label="Previous match">
-              <ChevronUp className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => jumpToMatch(1)} disabled={!matches} aria-label="Next match">
-              <ChevronDown className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setFindOpen(false); setFindQuery(""); }} aria-label="Close find bar">
-              <X className="h-3.5 w-3.5" />
-            </Button>
+          <div className="border-b bg-muted/40 shrink-0">
+            <div className="flex items-center gap-2 px-3 py-1.5">
+              <Search className="h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                id="nx-find-input"
+                value={findQuery}
+                onChange={(e) => { setFindQuery(e.target.value); setFindIdx(0); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); jumpToMatch(e.shiftKey ? -1 : 1); }
+                  if (e.key === "Escape") { setFindOpen(false); setFindQuery(""); }
+                }}
+                placeholder="Find in note…"
+                className="h-7 text-xs bg-background"
+              />
+              <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                {findQuery ? `${matches ? findIdx + 1 : 0}/${matches}` : ""}
+              </span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => jumpToMatch(-1)} disabled={!matches} aria-label="Previous match">
+                <ChevronUp className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => jumpToMatch(1)} disabled={!matches} aria-label="Next match">
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setFindOpen(false); setFindQuery(""); }} aria-label="Close find bar">
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            {findQuery && (
+              <div className="flex items-center gap-2 px-3 pb-1.5 animate-in slide-in-from-top-1 fade-in duration-150">
+                <Replace className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <Input
+                  value={replaceText}
+                  onChange={(e) => setReplaceText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); replaceOne(); } }}
+                  placeholder="Replace with…"
+                  className="h-7 text-xs bg-background"
+                />
+                <Button variant="outline" size="sm" className="h-7 text-xs shrink-0" onClick={replaceOne} disabled={!matches}>
+                  Replace
+                </Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs shrink-0" onClick={replaceAll} disabled={!matches}>
+                  All ({matches})
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -944,9 +1051,12 @@ function TypePreview({
 }) {
   if (note.noteType === "code") {
     return (
-      <pre className="rounded-lg border bg-muted/60 p-4 text-[13px] font-mono overflow-x-auto whitespace-pre-wrap">
-        <code>{content || "// nothing here yet"}</code>
-      </pre>
+      <CodeBlock
+        code={content || "// nothing here yet"}
+        noteId={note.id}
+        showPicker
+        maxHeight="min(70vh, 720px)"
+      />
     );
   }
   if (note.noteType === "spreadsheet") {

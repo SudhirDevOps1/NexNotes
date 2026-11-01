@@ -368,3 +368,37 @@ body { overscroll-behavior-y: none; }
   --baseBgActive: var(--muted);
   --baseText: var(--foreground);
 }
+
+/* v2.1 — Prism code blocks (prism-react-renderer) */
+.nx-codeblock {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  background: var(--card);
+}
+.md-preview .nx-codeblock { margin: 0.8rem 0; }
+.nx-codeblock pre,
+.md-preview .nx-codeblock pre {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  tab-size: 2;
+}
+.nx-codeblock .nx-code-line { display: table-row; width: 100%; }
+.nx-codeblock .nx-code-line > span:last-child { display: table-cell; white-space: pre; padding-right: 12px; }
+.nx-codeblock .nx-code-lineno { background: var(--card); }
+.nx-codeblock.nx-code-wrap pre { display: block; }
+.nx-codeblock.nx-code-wrap .nx-code-line { display: flex; align-items: flex-start; }
+.nx-codeblock.nx-code-wrap .nx-code-line > span:last-child {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+@media print {
+  .nx-codeblock pre { max-height: none !important; overflow: visible !important; }
+}

@@ -90,3 +90,22 @@ Full transparency — no fake checkmarks:
 - File versioning (note revisions exist; file history is on the roadmap)
 
 See [`PLAN.md`](../PLAN.md) for the running roadmap.
+
+
+## v2.1 — Prism code experience (2026-11-01)
+
+| Feature | Where |
+|---|---|
+| Prism syntax highlighting (self-hosted, no CDN) | markdown fences · code notes · print · share pages |
+| 40+ languages incl. **Prisma schema** grammar | fence tag or code-note language picker |
+| Copy button, line-number toggle, word-wrap toggle | every code block header |
+| Light/dark highlight themes (oneLight / oneDark) | follows the app theme automatically |
+| Auto-detection of unlabeled code | 20+ heuristics (prisma, ts, py, bash, sql, go, rust…) |
+| Tab / Shift+Tab indent & dedent | code & HTML note editors |
+| Find & Replace (+ Replace All) | editor find bar (Ctrl+F) |
+| Insert templates (journal · meeting · bug · review · README) | note ⋯ menu |
+| Export note as standalone styled HTML | note ⋯ menu → Export |
+| Spelling check toggle | Settings → Appearance |
+
+Privacy notes: highlighting runs fully client-side from bundled grammars — no CDN, no telemetry.
+Code-note language choices live in `localStorage` (`nx-codelangs`) and never leave the device.

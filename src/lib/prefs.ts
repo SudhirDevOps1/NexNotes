@@ -11,11 +11,13 @@ export interface EditorPrefs {
   font: FontChoice;
   size: SizeChoice;
   spacing: SpacingChoice;
+  /** v2.1 — browser spell-check in prose editors (code/HTML stay off) */
+  spell: boolean;
 }
 
 const KEY = "nx-editor-prefs";
 
-const DEFAULTS: EditorPrefs = { font: "sans", size: "m", spacing: "cozy" };
+const DEFAULTS: EditorPrefs = { font: "sans", size: "m", spacing: "cozy", spell: true };
 
 const FONT_VARS: Record<FontChoice, string> = {
   sans: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
@@ -37,6 +39,7 @@ export function loadPrefs(): EditorPrefs {
       font: parsed.font === "serif" || parsed.font === "mono" ? parsed.font : "sans",
       size: parsed.size === "s" || parsed.size === "l" ? parsed.size : "m",
       spacing: parsed.spacing === "compact" ? "compact" : "cozy",
+      spell: parsed.spell !== false,
     };
   } catch {
     return DEFAULTS;
@@ -46,6 +49,8 @@ export function loadPrefs(): EditorPrefs {
 export function savePrefs(prefs: EditorPrefs) {
   try {
     localStorage.setItem(KEY, JSON.stringify(prefs));
+    /* v2.1 — let open editors react immediately (spell toggle etc.) */
+    window.dispatchEvent(new CustomEvent("nx-prefs-changed"));
   } catch { /* private mode */ }
 }
 

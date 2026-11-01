@@ -3,6 +3,36 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [2.1.0] — 2026-11-01 — "Prism code experience"
+
+Additive release: code gets a first-class experience. Nothing removed.
+
+### Added — code
+- **Prism syntax highlighting everywhere** (`prism-react-renderer`, self-hosted — no CDN, privacy-first):
+  markdown code fences, **code-note preview**, print documents and public share pages.
+- **40+ languages** — bundled grammars plus registered extras (Rust, C#, Java, Kotlin, Swift, PHP,
+  Ruby, Dart, Lua) and a hand-written **Prisma schema** grammar.
+- **Code block toolbar** — language badge, one-click **copy** (morphs to a green check),
+  **line-number toggle**, **word-wrap toggle**; oneLight/oneDark themes follow the app theme.
+- **Auto-detection** of unlabeled fences (prisma/json/ts/tsx/js/python/bash/sql/go/rust/java/csharp/
+  html/css/yaml/diff/ini…).
+- **Code notes**: language picker (per-note, stored device-local) + **Tab / Shift+Tab**
+  indent & dedent.
+- Unknown fence languages degrade gracefully to plain rendering — highlighting never throws.
+
+### Added — editor
+- **Find & Replace** — the find bar gains a replace row: Replace current match + Replace All,
+  live match counter preserved.
+- **Note templates** — note menu → *Insert template*: Daily journal, Meeting notes, Bug report,
+  Code review, Project README; inserted at the caret.
+- **Export HTML** — standalone styled web page rendered with the same sanitized markdown pipeline;
+  self-contained, no external requests, `noindex`.
+- **Spelling toggle** — Settings → Appearance → *Check spelling* (prose editors only; code/HTML stay off).
+
+### Changed
+- `/api/health` version → `2.1.0`; sidebar badge → v2.1; demo seed gains a
+  "Code demo — Prism highlighting" tour note.
+
 ## [2.0.0] — 2026-11-01 — "Every premium tool, free"
 
 Public open-source launch. Everything below is **additive** — no v1.x feature was removed.

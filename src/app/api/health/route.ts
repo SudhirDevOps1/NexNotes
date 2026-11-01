@@ -25,7 +25,7 @@ export async function GET() {
     driver,
     driverLabel: driver === "postgres" ? "Neon Postgres" : "Local SQLite",
     counts: { notes, users, files },
-    version: "2.0.0",
+    version: "2.1.0",
     time: new Date().toISOString(),
   });
 }

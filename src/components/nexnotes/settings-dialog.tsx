@@ -408,6 +408,20 @@ export function SettingsDialog() {
             </div>
             <p className="text-[11px] text-muted-foreground">Applies to the editor and preview on every note, saved on this device.</p>
           </div>
+          {/* v2.1 — spelling toggle */}
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5 pr-3">
+              <p className="text-sm font-medium">Check spelling</p>
+              <p className="text-xs text-muted-foreground">
+                Browser spell-check in prose editors. Code and HTML notes stay off regardless.
+              </p>
+            </div>
+            <Switch
+              checked={prefs.spell !== false}
+              onCheckedChange={(v) => updatePrefs({ ...prefs, spell: v })}
+              aria-label="Toggle spell checking"
+            />
+          </div>
         </section>
 
         <Separator />
