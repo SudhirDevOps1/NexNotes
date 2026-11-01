@@ -1,0 +1,33 @@
+name: Gitleaks
+
+# Secrets guard — blocks API keys, tokens and private keys from ever landing
+# in the repo. Runs on every push/PR and re-scans the full history nightly,
+# because leaks can be committed long before anyone notices.
+#
+# Reviewed false positives live in .gitleaksignore with a written reason.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 2 * * *" # nightly, full-history scan
+  workflow_dispatch:
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Detect hardcoded secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history — a secret from 200 commits ago is still a leak
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

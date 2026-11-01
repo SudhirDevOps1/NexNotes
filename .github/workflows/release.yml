@@ -1,34 +1,62 @@
 name: Release
 
+# Automated releases. Cutting a tag `v*`:
+#   1. builds the production standalone bundle (proof it ships),
+#   2. attaches the source zip + the built server bundle to a GitHub Release,
+#   3. attaches SHA256 checksums so consumers can verify artifacts,
+#   4. generates release notes from the commits since the last tag.
+#
+# The Docker image (GHCR) is published separately by docker.yml on the same tag.
+
 on:
   push:
     tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
 
 jobs:
   release:
     name: GitHub Release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install & build
         run: |
           bun install --frozen-lockfile
           bunx prisma generate
+          mkdir -p db
+          bunx prisma db push --skip-generate
           bunx next build
+          cp -r .next/static .next/standalone/.next/
+          cp -r public .next/standalone/
         env:
           DATABASE_URL: "file:./db/custom.db"
-          AUTH_SECRET: release-build-secret
+          AUTH_SECRET: release-build-secret-not-for-production
 
-      - name: Zip source
-        run: git archive --format=zip --prefix=nexnotes/ -o /tmp/nexnotes-${{ github.ref_name }}.zip HEAD
+      - name: Package artifacts
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          git archive --format=zip --prefix="nexnotes/" -o "nexnotes-${VERSION}-source.zip" HEAD
+          cd .next/standalone
+          zip -qr "../../nexnotes-${VERSION}-server.zip" .
+          cd ../..
+          sha256sum "nexnotes-${VERSION}-source.zip" "nexnotes-${VERSION}-server.zip" > "nexnotes-${VERSION}-SHA256SUMS.txt"
+          ls -la nexnotes-*
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: /tmp/nexnotes-${{ github.ref_name }}.zip
+          files: |
+            nexnotes-*-source.zip
+            nexnotes-*-server.zip
+            nexnotes-*-SHA256SUMS.txt
