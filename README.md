@@ -1,0 +1,119 @@
+# NexNotes
+
+**The free, open-source, local-first notes app — every "premium" feature unlocked, forever.**
+
+A clean-room rewrite of what a modern notes app should be: end-to-end encrypted, offline-first,
+self-hostable in one command, and **zero paid gates**. Think *"Vaultwarden for your notes"*
+
+![NexNotes](docs/screenshots/desktop-notes.png)
+
+[![CI](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml)
+[![Docker](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+---
+
+## ✨ Why NexNotes?
+
+Standard Notes charges ~$90/year for its "Productivity" plan. NexNotes gives you **all of it — free** —
+plus things it doesn't have. No accounts to rent, no upgrade walls, no telemetry.
+
+| Standard Notes paid plan | NexNotes |
+|---|---|
+| Super notes (markdown, syntax, tables) | ✅ Markdown **+ KaTeX math + `[[wiki links]]` + backlinks** |
+| All premium editors | ✅ Rich text (WYSIWYG), Markdown, Tasks, Checklists, Code, **Spreadsheets**, Authenticator, HTML pages |
+| Note history | ✅ Automatic version snapshots + restore |
+| Protected notes | ✅ Per-note passwords (AES-GCM ciphertext) |
+| Encrypted attachments | ✅ Files library, E2E-encryptable |
+| Premium themes | ✅ Nord, Solarized, Rosé Pine, Gruvbox, Tokyo Night + 8 accents + editor fonts |
+| Two-factor login | ✅ TOTP (RFC 6238) with single-use backup codes |
+| Automatic backups | ✅ Daily local snapshots (IndexedDB, last 7) + restore |
+| Listed publishing | ✅ Self-hosted public share links (`/s/<token>`, revocable, noindex) |
+| Offline web access | ✅ PWA + IndexedDB local-first sync |
+| REST API | ✅ `/api/v1/*` with personal bearer tokens (hash-only storage) |
+| — | ➕ **Batch operations** (select → tag / move / merge / export / trash) |
+| — | ➕ **Smart views** (saved searches) |
+| — | ➕ Integrations vault (Discord webhook, Telegram, GitHub… — Obsidian-style) |
+| — | ➕ Command palette, live stats, reading progress, zen mode, collapsible panels |
+| — | ➕ Import from Standard Notes (decrypted backups) |
+| — | ➕ Multi-database: **SQLite (default) · Neon Postgres** switchable |
+
+Full comparison: [`docs/FEATURES.md`](docs/FEATURES.md)
+
+## 🔐 Privacy-first, by architecture
+
+- **E2E encryption** — AES-256-GCM, key derived from your password (PBKDF2, 310k iterations).
+  Turn it on in Settings → the server stores only ciphertext.
+- **Local-first** — every keystroke saves to IndexedDB instantly; the server is a sync target, not a dependency.
+- **No telemetry. No trackers. No third-party scripts.** Ever.
+- **HTML notes** render in a sandboxed iframe with JavaScript disabled; markdown HTML is sanitized (GitHub schema).
+- **2FA secrets** (TOTP) are verified server-side but API tokens are stored **hash-only**.
+
+Read the full model: [`docs/PRIVACY.md`](docs/PRIVACY.md) · [`docs/SECURITY-ARCHITECTURE.md`](docs/SECURITY-ARCHITECTURE.md)
+
+## 🚀 Quick start
+
+### Docker (recommended)
+
+```bash
+git clone https://github.com/SudhirDevOps1/NexNotes.git
+cd NexNotes
+docker compose up -d          # → http://localhost:3000
+```
+
+### Node / Bun (dev)
+
+```bash
+git clone https://github.com/SudhirDevOps1/NexNotes.git
+cd NexNotes
+bun install
+bunx prisma db push           # SQLite — zero config
+bun run dev                   # → http://localhost:3000
+```
+
+### Use Neon Postgres (or any Postgres)
+
+```bash
+node scripts/db-switch.mjs postgres "postgresql://user:pass@ep-xxx.neon.tech/nexnotes?sslmode=require"
+bun run db:push
+bun run dev
+```
+
+Details: [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md)
+
+## 🧭 Tour
+
+| | |
+|---|---|
+| ![Editor with math & wiki links](docs/screenshots/editor-math-wikilinks.png) | ![Settings & themes](docs/screenshots/settings-themes.png) |
+| *KaTeX math + clickable wiki links + backlinks* | *Premium theme presets — all free* |
+| ![2FA setup](docs/screenshots/twofa-setup.png) | ![WYSIWYG editor](docs/screenshots/richtext-wysiwyg.png) |
+| *Account 2FA with QR + backup codes* | *Rich text editor (markdown underneath)* |
+| ![Share page](docs/screenshots/share-page.png) | ![Mobile](docs/screenshots/mobile-responsive.png) |
+| *Public read-only share links* | *Fully responsive* |
+
+## ⌨️ Highlights
+
+- **Command palette** — `Ctrl+K` · **New note** — `Alt+N` · **Settings** — `Ctrl+,`
+- **Collapsible everything** — sidebar (`Alt+S`), note list (`Alt+L`), zen mode
+- **Live digits everywhere** — rotating TOTP codes with countdown rings, live word counts, animated stat counters
+- **Smart views** — save "starred + contains #demo" as a reusable view
+- **Batch merge** — select messy notes, merge into one in a click
+- **`[[wiki links]]`** — type `[[` for autocomplete; backlinks panel shows what links here
+- **Authenticator notes** — store otpauth:// secrets, get live 6-digit codes on-device
+
+## 🗺️ Status
+
+- **v2.0.0** — see [`CHANGELOG.md`](CHANGELOG.md) and [`PLAN.md`](PLAN.md)
+- AGPL-3.0 — fork it, self-host it, ship it. Attribution appreciated, never stripped.
+
+## 🤝 Contributing
+
+PRs are welcome — [`CONTRIBUTING.md`](CONTRIBUTING.md) has the full guide (`bun run lint && bunx tsc --noEmit` must pass).
+
+## 📜 License
+
+[GNU AGPL-3.0](LICENSE) — if you run a modified version as a network service, you must offer
+your source. This project is an independent clean-room codebase; it is not affiliated with
+Standard Notes.
