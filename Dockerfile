@@ -26,9 +26,11 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL="file:/app/db/custom.db"
 
-# non-root user
-RUN addgroup --system --gid 1001 nexnotes \
- && adduser --system --uid 1001 nexnotes \
+# non-root user — written straight into /etc/{group,passwd} because the
+# slim base ships neither adduser nor useradd (first tag build died with
+# exit 127 right here)
+RUN echo "nexnotes:x:1001:" >> /etc/group \
+ && echo "nexnotes:x:1001:1001::/app:/bin/false" >> /etc/passwd \
  && mkdir -p /app/db && chown -R nexnotes:nexnotes /app/db
 
 COPY --from=builder --chown=nexnotes:nexnotes /app/.next/standalone ./
