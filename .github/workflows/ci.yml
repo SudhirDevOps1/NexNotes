@@ -10,6 +10,11 @@ jobs:
   verify:
     name: Lint · Typecheck · Build · Smoke test
     runs-on: ubuntu-latest
+    env:
+      # Absolute path — no ambiguity between prisma CLI (schema-relative)
+      # and the standalone runtime (CWD-relative) for SQLite file paths.
+      DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
+      AUTH_SECRET: ci-test-secret-not-for-production
     steps:
       - uses: actions/checkout@v4
 
@@ -20,10 +25,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Generate Prisma client (SQLite)
+      - name: Generate Prisma client
         run: bunx prisma generate
-        env:
-          DATABASE_URL: "file:./db/custom.db"
+
+      - name: Prepare SQLite database (create file + tables)
+        run: |
+          mkdir -p db
+          bunx prisma db push --skip-generate
 
       - name: Lint
         run: bun run lint
@@ -36,25 +44,53 @@ jobs:
           bunx next build
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
-        env:
-          DATABASE_URL: "file:./db/custom.db"
-          AUTH_SECRET: ci-test-secret-not-for-production
 
-      - name: Smoke test (boot server + health + register + notes API)
+      - name: Smoke test (boot server + health + register + login)
         run: |
           bun .next/standalone/server.js &
           SERVER_PID=$!
+
+          up=""
           for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:3000/api/health >/dev/null && break
+            if curl -sf http://127.0.0.1:3000/api/health >/dev/null 2>&1; then up=1; break; fi
             sleep 2
           done
+          if [ -z "$up" ]; then
+            echo "::error::Server did not become healthy within 60s"
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
+
           echo "--- health ---"
-          curl -sf http://127.0.0.1:3000/api/health | tee /dev/stderr | grep -q '"ok":true'
-          echo "--- register+login+create note (v1 API) ---"
-          curl -sf -X POST http://127.0.0.1:3000/api/auth/register \
+          curl -sf http://127.0.0.1:3000/api/health | grep -q '"ok":true'
+          echo "health: ok"
+
+          EMAIL="ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@nexnotes.test"
+
+          echo "--- register $EMAIL ---"
+          REG=$(curl -sf -X POST http://127.0.0.1:3000/api/auth/register \
             -H 'Content-Type: application/json' \
-            -d "{\"email\":\"ci-$RANDOM@nexnotes.test\",\"password\":\"CiTest@123\"}" > /dev/null
-          curl -sf -X POST http://127.0.0.1:3000/api/auth/login \
+            -d "{\"email\":\"$EMAIL\",\"password\":\"CiTest@123\"}")
+          echo "$REG" | grep -q '"email"' || { echo "::error::register failed: $REG"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          echo "register: ok"
+
+          echo "--- login (bcrypt + session) ---"
+          LOGIN=$(curl -sf -X POST http://127.0.0.1:3000/api/auth/login \
             -H 'Content-Type: application/json' \
-            -d "{\"email\":\"ci-$RANDOM@nexnotes.test\",\"password\":\"CiTest@123\"}" > /dev/null || true
-          kill $SERVER_PID
+            -d "{\"email\":\"$EMAIL\",\"password\":\"CiTest@123\"}")
+          echo "$LOGIN" | grep -q '"email"' || { echo "::error::login failed: $LOGIN"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          echo "login: ok"
+
+          echo "--- wrong password must be rejected (401) ---"
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$EMAIL\",\"password\":\"WrongPass@1\"}")
+          if [ "$CODE" != "401" ]; then
+            echo "::error::Wrong-password login returned $CODE instead of 401"
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
+          echo "wrong-password: 401 ok"
+
+          kill $SERVER_PID 2>/dev/null || true
+          echo "✅ Smoke test passed"
