@@ -83,7 +83,7 @@ jobs:
       tag_name: ${{ steps.rp.outputs.tag_name }}
       paths_released: ${{ steps.rp.outputs.paths_released }}
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         id: rp
         with:
           command: manifest
