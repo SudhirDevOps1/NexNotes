@@ -164,10 +164,14 @@ async function main() {
 
   await writeFile(path.join(staging, "run.sh"), RUN_SH);
   await chmod(path.join(staging, "run.sh"), 0o755);
-  await writeFile(path.join(staging, "run.cmd"), RUN_CMD);
+  // cmd.exe demands CRLF — with LF endings it executes random fragments of
+  // lines ('NexNotes' is not recognized / '/d' is not recognized ...) and the
+  // server never starts. Learned the hard way on the tag build runner.
+  const toCmd = (s) => s.replace(/\n/g, "\r\n");
+  await writeFile(path.join(staging, "run.cmd"), toCmd(RUN_CMD));
   // identical copy under the brand name — the Start-Menu shortcut and the
   // installer smoke test point here (run.cmd stays for the portable zip users)
-  await writeFile(path.join(staging, "nexnotes.cmd"), RUN_CMD);
+  await writeFile(path.join(staging, "nexnotes.cmd"), toCmd(RUN_CMD));
   await writeFile(path.join(staging, "INSTALL.txt"), INSTALL_TXT(version));
 
   process.chdir(out);
