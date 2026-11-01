@@ -200,11 +200,14 @@ jobs:
         run: |
           $zip = (Get-ChildItem dist/nexnotes-*-windows-x64.zip | Select-Object -First 1).FullName
           Expand-Archive $zip -DestinationPath C:\nexnotes
-          New-Item -ItemType Directory -Force -Path C:\nexnotes\db | Out-Null
+          # the archive wraps everything in a versioned folder (like the tarball)
+          $app = (Get-ChildItem C:\nexnotes -Directory | Select-Object -First 1).FullName
+          New-Item -ItemType Directory -Force -Path "$app\db" | Out-Null
+          $db = ($app -replace '\\','/') + "/db/smoke.db"
           $env:PORT = "4599"
-          $env:DATABASE_URL = "file:C:/nexnotes/db/smoke.db"
+          $env:DATABASE_URL = "file:$db"
           $env:AUTH_SECRET = "windows-smoke-secret-not-for-production"
-          $p = Start-Process node -ArgumentList "C:\nexnotes\server.js" -WorkingDirectory C:\nexnotes `
+          $p = Start-Process node -ArgumentList "$app\server.js" -WorkingDirectory $app `
                  -PassThru -NoNewWindow -RedirectStandardOutput C:\nn-out.log -RedirectStandardError C:\nn-err.log
           $ok = $false
           foreach ($i in 1..30) {
