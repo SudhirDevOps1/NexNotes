@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { APP_VERSION } from "@/lib/version";
 
 /**
  * GET /api/health — driver + storage info surfaced in Settings.
@@ -25,7 +26,7 @@ export async function GET() {
     driver,
     driverLabel: driver === "postgres" ? "Neon Postgres" : "Local SQLite",
     counts: { notes, users, files },
-    version: "2.1.0",
+    version: APP_VERSION,
     time: new Date().toISOString(),
   });
 }
