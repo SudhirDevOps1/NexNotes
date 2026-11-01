@@ -261,18 +261,30 @@ jobs:
           Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
           Remove-Item Env:AUTH_SECRET -ErrorAction SilentlyContinue
           # -NoNewWindow and -WindowStyle are mutually exclusive in Start-Process
-          $p = Start-Process cmd -ArgumentList "/c","C:\nn-installed\nexnotes.cmd" `
+          # redirect the cmd's own output to a file so a silent failure is
+          # diagnosable from this log alone
+          $p = Start-Process cmd -ArgumentList '/c','C:\nn-installed\nexnotes.cmd > C:\nn-cmd.log 2>&1' `
                  -PassThru -NoNewWindow
           $ok = $false
+          $r = $null
           foreach ($i in 1..30) {
             try {
               $r = Invoke-RestMethod -Uri http://127.0.0.1:4600/api/health -TimeoutSec 2
               if ($r.ok) { $ok = $true; break }
-            } catch { Start-Sleep -Seconds 2 }
+            } catch {
+              try { (Invoke-WebRequest -UseBasicParsing -Uri http://127.0.0.1:4600/api/health -TimeoutSec 2).Content > C:\nn-health-last.txt } catch {}
+              Start-Sleep -Seconds 2
+            }
           }
           taskkill /PID $p.Id /T /F 2>$null | Out-Null
-          if (-not $ok) { throw "installed app failed the boot test (data dir bootstrap broken?)" }
-          Write-Host "installed app boot: ok (version $($r.version), data in %LOCALAPPDATA%\NexNotes)"
+          if (-not $ok) {
+            "--- nexnotes.cmd output ---"; Get-Content C:\nn-cmd.log -ErrorAction SilentlyContinue
+            "--- last health response ---"; Get-Content C:\nn-health-last.txt -ErrorAction SilentlyContinue
+            "--- installed root ---"; (Get-ChildItem C:\nn-installed | Select-Object -ExpandProperty Name) -join ', '
+            "--- installed db dir ---"; Get-ChildItem C:\nn-installed\db -ErrorAction SilentlyContinue | ForEach-Object { "$($_.Name) $($_.Length)" }
+            throw "installed app failed the boot test"
+          }
+          Write-Host "installed app boot: ok (version $($r.version), data in install-dir\db)"
 
       - uses: actions/upload-artifact@v4
         with:
