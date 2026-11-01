@@ -83,16 +83,29 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 - [x] Conventional-commit enforcement active (husky + commitlint, verified locally)
 - [x] release-please config + manifest committed
 - [x] artifact pipeline verified (tarball, AppImage, Windows zip boot tests)
-- [ ] **Optional but recommended:** store a fine-grained PAT with
-      *Contents: read/write* + *Pull requests: read/write* as the repo secret
-      `RELEASE_PLEASE_TOKEN`. The workflow already falls back to
-      `secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN` — with only the
-      default token, the release PR is created but cannot trigger other
-      workflows (GitHub's anti-recursion rule).
-- [ ] If release PRs don't appear: Settings → Actions → General → enable
-      **"Allow GitHub Actions to create and approve pull requests"**.
+- [x] first tag build ran end-to-end; windows smoke now boots from the
+      versioned folder inside the zip (first run exposed that gap — fixed)
+- [ ] **REQUIRED for release PRs (hit in practice, 2026-11-01):** the default
+      `GITHUB_TOKEN` cannot create pull requests until one of these is done:
+      1. Settings → Actions → General → Workflow permissions → check
+         **"Allow GitHub Actions to create and approve pull requests"**, or
+      2. store a fine-grained PAT with *Contents: read/write* +
+         *Pull requests: read/write* as the repo secret `RELEASE_PLEASE_TOKEN`
+         (the workflow already prefers it; a PAT also makes the release PR
+         trigger the other workflows, which the default token never can).
+      Until one of the two is done, `release-please` fails with
+      "GitHub Actions is not permitted to create or approve pull requests".
+- [ ] **Codecov badge stays "unknown" until CODECOV_TOKEN exists:** Codecov
+      retired tokenless uploads (the first run proved it — "Token required").
+      Log into codecov.io with GitHub → copy the repo's upload token →
+      Settings → Secrets and variables → Actions → `CODECOV_TOKEN`. The
+      workflow meanwhile attaches the raw lcov as the `coverage-report`
+      artifact and prints the % table in the run summary, so nothing is lost
+      in the meantime.
 - [ ] Recommended branch protection on `main`: require CI + CodeQL + E2E Gate
       to pass before merge (Settings → Branches).
+- [ ] Optional: OWASP ZAP baseline runs nightly at 01:45 UTC (cron) — it can
+      also be triggered manually from the Actions tab (workflow_dispatch).
 
 ## 6. Cutting the first release
 
@@ -112,6 +125,7 @@ the next version automatically.
 |---|---|
 | Release PR never appears | Actions PR-creation setting disabled (see §5), or no `feat:`/`fix:` commits since last tag |
 | `commitlint` rejects your message locally | Use `type: subject` form — see §2 table |
-| Windows smoke job fails | Check `prisma/schema.prisma` still lists `binaryTargets = ["native", "windows"]` |
+| Windows smoke job fails | Check `prisma/schema.prisma` still lists `binaryTargets = ["native", "windows"]`; the boot test resolves the versioned folder inside the zip automatically |
+| Codecov badge shows "unknown" | Set `CODECOV_TOKEN` (see §5) — tokenless uploads are gone |
 | AppImage fails on old distros | Built on ubuntu-22.04 for glibc ≥ 2.35; rebuild on an older runner image if needed |
 | Artifacts uploaded twice | `gh release upload --clobber` is intentional — re-runs replace assets |
