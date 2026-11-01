@@ -4,6 +4,9 @@
 
 generator client {
   provider = "prisma-client-js"
+  // windows engine rides along so the standalone bundle (release artifacts)
+  // boots on Windows too — the release workflow smoke-tests exactly that.
+  binaryTargets = ["native", "windows"]
 }
 
 datasource db {

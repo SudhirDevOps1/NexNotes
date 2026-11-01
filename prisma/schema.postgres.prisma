@@ -5,6 +5,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // keep in sync with schema.prisma — windows engine for the release bundle
+  binaryTargets = ["native", "windows"]
 }
 
 datasource db {

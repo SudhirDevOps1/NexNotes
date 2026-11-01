@@ -1,62 +1,296 @@
 name: Release
 
-# Automated releases. Cutting a tag `v*`:
-#   1. builds the production standalone bundle (proof it ships),
-#   2. attaches the source zip + the built server bundle to a GitHub Release,
-#   3. attaches SHA256 checksums so consumers can verify artifacts,
-#   4. generates release notes from the commits since the last tag.
+# Automated release train, driven by Google's release-please:
 #
-# The Docker image (GHCR) is published separately by docker.yml on the same tag.
+#   push to main        → quality gate → release-please turns Conventional
+#                         Commits into a "chore(main): release nexnotes x.y.z"
+#                         PR (CHANGELOG.md + package.json version bump)
+#   release PR merged   → release-please tags v* and opens the GitHub Release;
+#                         the artifact jobs below build from THAT exact tag
+#   manual v* tag push  → same artifact pipeline against the tag (fallback)
+#
+# CHANGELOG.md is generated from commit messages — never edit it by hand.
+# The app version lives only in package.json (read at build time by
+# src/lib/version.ts), so health endpoint, UI and artifacts cannot drift.
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
-  release:
-    name: GitHub Release
+  quality-gate:
+    name: Quality gate (lint · typecheck · tests · build)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
+      AUTH_SECRET: release-build-secret-not-for-production
     steps:
       - uses: actions/checkout@v4
+
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install & build
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare SQLite database
         run: |
-          bun install --frozen-lockfile
-          bunx prisma generate
           mkdir -p db
           bunx prisma db push --skip-generate
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: Build standalone bundle
+        run: |
           bunx next build
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
-        env:
-          DATABASE_URL: "file:./db/custom.db"
-          AUTH_SECRET: release-build-secret-not-for-production
 
-      - name: Package artifacts
-        run: |
-          VERSION="${GITHUB_REF_NAME}"
-          git archive --format=zip --prefix="nexnotes/" -o "nexnotes-${VERSION}-source.zip" HEAD
-          cd .next/standalone
-          zip -qr "../../nexnotes-${VERSION}-server.zip" .
-          cd ../..
-          sha256sum "nexnotes-${VERSION}-source.zip" "nexnotes-${VERSION}-server.zip" > "nexnotes-${VERSION}-SHA256SUMS.txt"
-          ls -la nexnotes-*
-
-      - name: Create release
-        uses: softprops/action-gh-release@v2
+  release-please:
+    name: release-please (release PR / tag)
+    if: github.ref == 'refs/heads/main'
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      releases_created: ${{ steps.rp.outputs.releases_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      paths_released: ${{ steps.rp.outputs.paths_released }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
         with:
-          generate_release_notes: true
-          files: |
-            nexnotes-*-source.zip
-            nexnotes-*-server.zip
-            nexnotes-*-SHA256SUMS.txt
+          command: manifest
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # A PAT stored as RELEASE_PLEASE_TOKEN lets the release PR trigger
+          # CI on itself; the built-in GITHUB_TOKEN also works, but events it
+          # creates are ignored by other workflows (anti-recursion rule).
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  build-artifacts:
+    name: Build release artifacts
+    # release-please is skipped on tag builds, so the needs gate must be
+    # evaluated explicitly — a plain `needs` would silently skip tag builds.
+    needs: [quality-gate, release-please]
+    if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
+    runs-on: ubuntu-22.04 # oldest runner → AppImage/glibc works on older distros
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
+      AUTH_SECRET: release-build-secret-not-for-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # release path: the exact tag release-please just created;
+          # manual path: the pushed v* tag. Builds never run off main.
+          ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Build standalone bundle
+        run: |
+          bunx next build
+          cp -r .next/static .next/standalone/.next/
+          cp -r public .next/standalone/
+
+      - name: Fetch the Windows Node runtime that ships inside the zip/installer
+        run: |
+          NODE_VER=22.14.0
+          curl -fsSL -o /tmp/node-win.zip "https://nodejs.org/dist/v${NODE_VER}/node-v${NODE_VER}-win-x64.zip"
+          unzip -o -q /tmp/node-win.zip -d /tmp/node-win "*/node.exe"
+          echo "NODE_WIN=$(find /tmp/node-win -name node.exe | head -1)" >> "$GITHUB_ENV"
+
+      - name: Package linux tarball + windows zip + checksums
+        run: node scripts/package-release.mjs --standalone .next/standalone --out dist --node-win "$NODE_WIN"
+
+      - name: Build Linux AppImage
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          bash scripts/build-appimage.sh "$VERSION" .next/standalone dist
+
+      - name: Boot-test packaged tarball
+        run: |
+          rm -rf /tmp/pkgtest && mkdir -p /tmp/pkgtest
+          tar -xzf dist/nexnotes-*-linux-x64.tar.gz -C /tmp/pkgtest
+          cd /tmp/pkgtest/nexnotes-*
+          PORT=4599 ./run.sh &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4599/api/health | grep -q '"ok":true' && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:4599/api/health | grep -q '"ok":true' \
+            || { echo "::error::packaged tarball failed to boot"; exit 1; }
+          pkill -f "node server.js" || true
+          echo "tarball boot: ok"
+
+      - name: Boot-test AppImage (FUSE-less)
+        run: |
+          cd dist
+          chmod +x nexnotes-*-linux-x64.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 PORT=4598 ./nexnotes-*-linux-x64.AppImage &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4598/api/health | grep -q '"ok":true' && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:4598/api/health | grep -q '"ok":true' \
+            || { echo "::error::AppImage failed to boot"; exit 1; }
+          pkill -f "usr/bin/node" || true
+          echo "AppImage boot: ok"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist/
+          retention-days: 5
+
+  smoke-windows:
+    name: Boot test windows zip + installer
+    needs: [release-please, build-artifacts]
+    if: ${{ !cancelled() && needs.build-artifacts.result == 'success' }}
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # same commit the artifacts were built from
+          ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+
+      - name: Extract, boot, health check (portable zip, system Node)
+        shell: pwsh
+        run: |
+          $zip = (Get-ChildItem dist/nexnotes-*-windows-x64.zip | Select-Object -First 1).FullName
+          Expand-Archive $zip -DestinationPath C:\nexnotes
+          New-Item -ItemType Directory -Force -Path C:\nexnotes\db | Out-Null
+          $env:PORT = "4599"
+          $env:DATABASE_URL = "file:C:/nexnotes/db/smoke.db"
+          $env:AUTH_SECRET = "windows-smoke-secret-not-for-production"
+          $p = Start-Process node -ArgumentList "C:\nexnotes\server.js" -WorkingDirectory C:\nexnotes `
+                 -PassThru -NoNewWindow -RedirectStandardOutput C:\nn-out.log -RedirectStandardError C:\nn-err.log
+          $ok = $false
+          foreach ($i in 1..30) {
+            try {
+              $r = Invoke-RestMethod -Uri http://127.0.0.1:4599/api/health -TimeoutSec 2
+              if ($r.ok) { $ok = $true; break }
+            } catch { Start-Sleep -Seconds 2 }
+          }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          if (-not $ok) {
+            "--- stdout ---"; Get-Content C:\nn-out.log -ErrorAction SilentlyContinue
+            "--- stderr ---"; Get-Content C:\nn-err.log -ErrorAction SilentlyContinue
+            throw "Windows zip failed the boot test"
+          }
+          Write-Host "windows boot: ok (version $($r.version))"
+
+      - name: Build the per-user installer (NSIS)
+        shell: pwsh
+        run: |
+          $ver = ((Get-ChildItem dist/nexnotes-*-windows-x64.zip).Name -replace 'nexnotes-v','' -replace '-windows-x64.zip','')
+          # extract a pristine copy — C:\nexnotes now carries smoke-test files
+          Expand-Archive dist/nexnotes-v$ver-windows-x64.zip -DestinationPath C:\nexnotes-pkg
+          $src = (Get-ChildItem C:\nexnotes-pkg -Directory | Select-Object -First 1).FullName
+          makensis -DVERSION=$ver -DSRCDIR=$src -DOUTFILE="dist\nexnotes-v$ver-windows-x64-setup.exe" scripts/installer.nsi
+          if (-not (Test-Path "dist\nexnotes-v$ver-windows-x64-setup.exe")) { throw "makensis produced no installer" }
+          Write-Host "installer built: nexnotes-v$ver-windows-x64-setup.exe"
+
+      - name: Silent-install the installer, then boot what the user would get
+        shell: pwsh
+        run: |
+          $ver = ((Get-ChildItem dist/nexnotes-*-windows-x64-setup.exe).Name -replace 'nexnotes-v','' -replace '-windows-x64-setup.exe','')
+          $proc = Start-Process -FilePath "dist\nexnotes-v$ver-windows-x64-setup.exe" `
+                    -ArgumentList "/S","/D=C:\nn-installed" -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "installer exited with $($proc.ExitCode)" }
+          if (-not (Test-Path 'C:\nn-installed\server.js')) { throw "install dir is missing server.js" }
+          if (-not (Test-Path 'C:\nn-installed\bin\node.exe')) { throw "bundled node.exe missing" }
+
+          $env:PORT = "4600"
+          $env:NEXNOTES_NO_BROWSER = "1"
+          Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+          Remove-Item Env:AUTH_SECRET -ErrorAction SilentlyContinue
+          $p = Start-Process cmd -ArgumentList "/c","C:\nn-installed\nexnotes.cmd" `
+                 -PassThru -NoNewWindow -WindowStyle Hidden
+          $ok = $false
+          foreach ($i in 1..30) {
+            try {
+              $r = Invoke-RestMethod -Uri http://127.0.0.1:4600/api/health -TimeoutSec 2
+              if ($r.ok) { $ok = $true; break }
+            } catch { Start-Sleep -Seconds 2 }
+          }
+          taskkill /PID $p.Id /T /F 2>$null | Out-Null
+          if (-not $ok) { throw "installed app failed the boot test (data dir bootstrap broken?)" }
+          Write-Host "installed app boot: ok (version $($r.version), data in %LOCALAPPDATA%\NexNotes)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/*-setup.exe
+          retention-days: 5
+
+  publish:
+    name: Attach artifacts to the GitHub Release
+    needs: [release-please, build-artifacts, smoke-windows]
+    if: ${{ !cancelled() && needs.build-artifacts.result == 'success' && needs.smoke-windows.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist
+
+      - name: Upload assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release-please.outputs.tag_name || github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --generate-notes --title "NexNotes $TAG"
+          gh release upload "$TAG" dist/* --clobber
+          echo "attached to $TAG:"
+          ls -la dist/
