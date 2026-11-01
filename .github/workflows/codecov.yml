@@ -1,6 +1,14 @@
 name: Coverage
 
-# Test coverage reports, uploaded to Codecov (tokenless for public repos).
+# Test coverage reports, uploaded to Codecov.
+#
+# Codecov killed tokenless uploads in 2024, so the badge stays "unknown"
+# until CODECOV_TOKEN is set (repo settings → secrets): log into
+# codecov.io with GitHub, grab the repo token, paste it — done. Until then
+# the report itself still lands in two places that need no account:
+#   1. the coverage artifact on every run
+#   2. the % table in the run's step summary
+#
 # Deliberately separate from CI so the quality gate stays fast — this runs
 # the same suite once more under the V8 coverage instrument.
 #
@@ -41,12 +49,19 @@ jobs:
       - name: Run tests with coverage
         run: bun run test:coverage
 
-      - name: Upload to Codecov
+      - name: Upload coverage artifact (always works, no account needed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/lcov.info
+          retention-days: 14
+
+      - name: Upload to Codecov (needs CODECOV_TOKEN to actually land)
         uses: codecov/codecov-action@v5
         with:
           files: coverage/lcov.info
           fail_ci_if_error: false # advisory — never block on the uploader
-          token: ${{ secrets.CODECOV_TOKEN }} # optional; tokenless works on public repos
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Coverage summary
         if: always()
@@ -56,3 +71,4 @@ jobs:
           else
             echo "Coverage summary not produced (text table is in the test step above)." >> "$GITHUB_STEP_SUMMARY"
           fi
+          echo "lcov also attached as the coverage-report artifact" >> "$GITHUB_STEP_SUMMARY"
