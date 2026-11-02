@@ -92,8 +92,10 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 - [x] desktop packaging rebuilt on Electron (2.2.0): AppImage boot-tested under
       Xvfb locally and in CI; Windows NSIS silent-installed + health-checked on
       windows-latest; server.json handshake makes both smokes port-agnostic
-- [x] first tag build ran end-to-end; windows smoke now boots from the
-      versioned folder inside the zip (first run exposed that gap — fixed)
+- [x] windows smoke resolves the installed exe from the HKCU uninstall entry
+      (the per-user folder follows the sanitized *package* name —
+      `nexnotes-desktop` — not the display name; the first tag build caught
+      this when the smoke looked in `Programs\NexNotes` and found nothing)
 - [ ] **REQUIRED for release PRs (hit in practice, 2026-11-01):** the default
       `GITHUB_TOKEN` cannot create pull requests until one of these is done:
       1. Settings → Actions → General → Workflow permissions → check
@@ -104,6 +106,9 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
          trigger the other workflows, which the default token never can).
       Until one of the two is done, `release-please` fails with
       "GitHub Actions is not permitted to create or approve pull requests".
+      Note (2026-11-02): flipping the toggle *via API* needs a token with
+      *Administration: read/write* — the owner's fine-grained PAT used for
+      pushes does not carry it, so the toggle stays a manual step.
 - [ ] **Codecov badge stays "unknown" until CODECOV_TOKEN exists:** Codecov
       retired tokenless uploads (the first run proved it — "Token required").
       Log into codecov.io with GitHub → copy the repo's upload token →

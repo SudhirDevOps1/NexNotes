@@ -264,8 +264,24 @@ jobs:
           Write-Host "installer: $exe"
           $p = Start-Process -FilePath $exe -ArgumentList "/S" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "installer exited with $($p.ExitCode)" }
-          $app = "$env:LOCALAPPDATA\Programs\NexNotes\NexNotes.exe"
-          if (-not (Test-Path $app)) { throw "per-user install dir is missing NexNotes.exe ($app)" }
+
+          # the install folder is electron-builder's sanitized package name
+          # (nexnotes-desktop), not the display name — resolve the real
+          # location from the per-user uninstall entry, glob as a fallback
+          $app = $null
+          $entry = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -eq "NexNotes" } | Select-Object -First 1
+          if ($entry -and $entry.InstallLocation) { $app = Join-Path $entry.InstallLocation "NexNotes.exe" }
+          if (-not ($app -and (Test-Path $app))) {
+            $app = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 -Filter "NexNotes.exe" -ErrorAction SilentlyContinue |
+              Select-Object -ExpandProperty FullName -First 1
+          }
+          if (-not $app) {
+            Get-ChildItem "$env:LOCALAPPDATA\Programs" -Directory -ErrorAction SilentlyContinue |
+              ForEach-Object { Write-Host "  found: Programs\$($_.Name)" }
+            throw "NexNotes.exe not found after silent install — no uninstall entry and nothing under %LOCALAPPDATA%\Programs"
+          }
+          Write-Host "installed at: $app"
 
           Start-Process -FilePath $app
           $handshake = "$env:APPDATA\NexNotes\server.json"
