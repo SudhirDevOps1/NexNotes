@@ -189,7 +189,7 @@ Electron per the request "electron se app bne":
    install (no UAC, no directory page, `runAfterFinish`), AppImage on Linux.
    Traps found the hard way and documented in RELEASE_SETUP §7:
    - extraResources silently drops a root-level `node_modules` → server is
-     staged under `dist/desktop-payload/server/` (wrapper dir defeats the check)
+     staged under `build/desktop-payload/server/` (wrapper dir defeats the check)
    - `ELECTRON_RUN_AS_NODE` children re-use `process.execPath` — no node.exe
      shipping
 4. **CI** — `build-windows` builds the standalone bundle + installer on

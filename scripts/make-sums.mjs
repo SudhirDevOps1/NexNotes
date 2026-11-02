@@ -29,7 +29,11 @@ function sha256(file) {
 }
 
 const skip = new Set([sumsName]);
-const files = (await readdir(dir)).filter((f) => !skip.has(f)).sort();
+// withFileTypes + isFile(): a stray directory in the dist dir (staging
+// leftovers, an editor's temp dir) must be skipped, not EISDIR'd on —
+// that is exactly how the first v2.2.0 publish died
+const entries = await readdir(dir, { withFileTypes: true });
+const files = entries.filter((e) => e.isFile() && !skip.has(e.name)).map((e) => e.name).sort();
 if (files.length === 0) throw new Error(`no assets found in ${dir}`);
 
 const lines = [];
