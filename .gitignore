@@ -7,6 +7,11 @@
 !/public/
 !/docs/
 !/scripts/
+!/desktop/
+!/desktop/src/
+!/desktop/build/
+/desktop/node_modules/
+/desktop/dist/
 !/.github/
 !/tests/
 
