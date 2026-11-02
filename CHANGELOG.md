@@ -3,6 +3,36 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [2.2.0] — 2026-11-02 — "Real desktop app"
+
+The desktop experience is rebuilt on Electron. Nothing about the web app changed.
+
+### Added — desktop
+- **Windows installer (Electron + NSIS)** — one click, per-user install to
+  `%LOCALAPPDATA%\Programs\NexNotes`, no admin rights, no directory page; the app
+  launches right after setup. Notes live in `%APPDATA%\NexNotes` and survive both
+  upgrades and uninstalls.
+- **Linux AppImage (Electron)** — real desktop window with icon and taskbar name,
+  no more console-plus-browser-tab launch.
+- **Desktop shell** (`desktop/`) — the Next.js standalone server runs as a child
+  process inside Electron's own runtime (`ELECTRON_RUN_AS_NODE`), so no second
+  Node runtime ships in the box. First run seeds the schema-initialized SQLite
+  database from the bundle; the server log lands in the user-data dir; a
+  `server.json` handshake file publishes the picked port for CI smoke tests.
+
+### Fixed
+- The 2.1.0 Windows installer aborted with **"Can't write: \INSTALL.txt"** — its
+  NSIS script had no `InstallDir`, so interactive installs tried to write to the
+  drive root. Replaced wholesale by the Electron installer above.
+- **"Installer integrity check has failed"** on download is a truncated download,
+  not a broken build — releases now ship one `SHA256SUMS.txt` covering every asset
+  so a bad download can be proven in seconds.
+
+### Changed — CI
+- Windows artifacts are now built **on a Windows runner** and the silent-installed
+  app is booted and health-checked before anything is published; the AppImage is
+  boot-tested under Xvfb; checksums are generated for all assets in one file.
+
 ## [2.1.0] — 2026-11-01 — "Prism code experience"
 
 Additive release: code gets a first-class experience. Nothing removed.
