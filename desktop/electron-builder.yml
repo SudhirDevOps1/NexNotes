@@ -1,0 +1,61 @@
+# electron-builder config for the NexNotes desktop shell.
+#
+# The Electron app itself is tiny (main.js only, packed into app.asar); the
+# actual weight is the Next.js standalone server staged by
+# scripts/stage-desktop.mjs into dist/server and shipped as an extraResource.
+#
+# Windows: one-click per-user NSIS into %LOCALAPPDATA%\Programs\NexNotes —
+# no UAC prompt, no directory page, nothing that can fail on a locked-down
+# machine (the hand-rolled installer this replaces failed exactly there).
+# Linux: AppImage.
+appId: com.sudhirdevops.nexnotes
+productName: NexNotes
+copyright: AGPL-3.0
+
+directories:
+  buildResources: build
+  output: dist
+files:
+  - src/**/*
+  - package.json
+asar: true
+compression: normal
+
+extraResources:
+  # staged server bundle (Next standalone + template db), nested one level
+  # deep on purpose: electron-builder's copy filter hard-codes "a root-level
+  # node_modules dir is always ignored" (app-builder-lib out/util/filter.js),
+  # so staging dist/server directly would ship an app that boots to
+  # "Cannot find module 'next'". One wrapper dir defeats that check:
+  # dist/desktop-payload/server/** lands in resources/server/**
+  - from: ../dist/desktop-payload
+    to: .
+    filter:
+      - "**/*"
+  # window icon for Linux (Windows gets its icon embedded into the exe)
+  - from: build/icon.png
+    to: icon.png
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-${version}-windows-x64-setup.${ext}
+
+nsis:
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: false
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  artifactName: ${productName}-${version}-windows-x64-setup.${ext}
+
+linux:
+  icon: build/icon.png
+  category: Utility
+  target:
+    - target: AppImage
+      arch: [x64]
+  artifactName: ${productName}-${version}-linux-x64.${ext}

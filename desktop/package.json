@@ -1,0 +1,16 @@
+{
+  "name": "nexnotes-desktop",
+  "version": "2.1.0",
+  "private": true,
+  "description": "NexNotes desktop shell — wraps the Next.js standalone server in a real desktop window",
+  "author": "SudhirDevOps1",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  }
+}
