@@ -24,13 +24,13 @@ release-please                   # opens/updates a release PR:
 tag v* + GitHub Release created  # artifacts build from THAT exact tag
       │
       ▼
-build-artifacts                  # linux tar.gz · windows zip · AppImage · SHA256SUMS
-      │                          # tarball + AppImage are boot-tested on the runner
+build-linux                      # portable server (tar.gz + windows zip)
+      │                          # + Electron AppImage — both boot-tested
       ▼
-smoke-windows                    # the windows zip is booted and health-checked
-      │                          # on a real windows-latest runner
+build-windows                    # Electron NSIS installer — silent-installed
+      │                          # and health-checked on a real windows runner
       ▼
-publish                          # gh release upload <tag> dist/*
+publish                          # one SHA256SUMS + gh release upload <tag>
 ```
 
 Manual fallback: pushing any `v*` tag skips release-please and runs the same
@@ -60,11 +60,13 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 |---|---|
 | `release-please-config.json` | release type (node), changelog sections, PR title |
 | `.release-please-manifest.json` | current released version per package (root `.`) |
-| `.github/workflows/release.yml` | gate → release-please → artifacts → windows smoke → publish |
+| `.github/workflows/release.yml` | gate → release-please → build-linux + build-windows → publish |
 | `commitlint.config.mjs` | allowed commit types (incl. `security`) |
 | `.husky/pre-commit`, `.husky/commit-msg` | local enforcement (activated by `prepare: husky`) |
-| `scripts/package-release.mjs` | tar.gz + zip + SHA256SUMS, version from package.json |
-| `scripts/build-appimage.sh` | FUSE-less AppImage build (appimagetool) |
+| `scripts/package-release.mjs` | portable server tar.gz + zip, version from package.json |
+| `scripts/stage-desktop.mjs` | stages the standalone server for electron-builder (nested so its node_modules survives; prunes the foreign prisma engine) |
+| `scripts/make-sums.mjs` | one sha256sum-compatible file covering every release asset |
+| `desktop/` | Electron shell (`src/main.js`), electron-builder config, icons |
 | `src/lib/version.ts` | single source of truth — imports package.json |
 
 ## 4. Zero manual drift invariants
@@ -77,12 +79,19 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 3. **Never bump `version` in package.json manually.** release-please does it in
    the release PR. If you must force a version, use a
    `Release-As: x.y.z` footer on one commit instead.
+   *(Until the §5 PR-permission setting is enabled, versions are cut manually:
+   a `chore(release): ...` commit bumping package.json + the manifest together,
+   then a `v*` tag. The manifest must move with the version or release-please
+   will propose the same bump twice once it works.)*
 
 ## 5. One-time repository settings (checklist)
 
 - [x] Conventional-commit enforcement active (husky + commitlint, verified locally)
 - [x] release-please config + manifest committed
 - [x] artifact pipeline verified (tarball, AppImage, Windows zip boot tests)
+- [x] desktop packaging rebuilt on Electron (2.2.0): AppImage boot-tested under
+      Xvfb locally and in CI; Windows NSIS silent-installed + health-checked on
+      windows-latest; server.json handshake makes both smokes port-agnostic
 - [x] first tag build ran end-to-end; windows smoke now boots from the
       versioned folder inside the zip (first run exposed that gap — fixed)
 - [ ] **REQUIRED for release PRs (hit in practice, 2026-11-01):** the default
@@ -110,9 +119,9 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 ## 6. Cutting the first release
 
 ```bash
-git tag v2.1.0 && git push origin v2.1.0
-# → Release workflow builds linux tar.gz, windows zip, AppImage,
-#   boot-tests all three (incl. a real windows-latest run), attaches
+git tag v2.2.0 && git push origin v2.2.0
+# → Release workflow builds the Electron NSIS installer (windows) + AppImage
+#   (linux) + portable server packages, boot-tests all of them, attaches
 #   SHA256SUMS, and publishes the GitHub Release.
 ```
 
@@ -125,7 +134,9 @@ the next version automatically.
 |---|---|
 | Release PR never appears | Actions PR-creation setting disabled (see §5), or no `feat:`/`fix:` commits since last tag |
 | `commitlint` rejects your message locally | Use `type: subject` form — see §2 table |
-| Windows smoke job fails | Check `prisma/schema.prisma` still lists `binaryTargets = ["native", "windows"]`; the boot test resolves the versioned folder inside the zip automatically |
+| "NSIS Error: Installer integrity check has failed" | Almost always a truncated download — re-download and verify against `nexnotes-v*-SHA256SUMS.txt` |
+| Windows smoke job fails | Check `prisma/schema.prisma` still lists `binaryTargets = ["native", "windows"]`; the boot test reads the port from `%APPDATA%\NexNotes\server.json` |
+| AppImage builds but the app logs `Cannot find module 'next'` | electron-builder ignores a ROOT-level `node_modules` dir in extraResources (`app-builder-lib` `out/util/filter.js`) — keep the server staged under `dist/desktop-payload/server/` (the wrapper dir defeats the check) |
 | Codecov badge shows "unknown" | Set `CODECOV_TOKEN` (see §5) — tokenless uploads are gone |
 | AppImage fails on old distros | Built on ubuntu-22.04 for glibc ≥ 2.35; rebuild on an older runner image if needed |
 | Artifacts uploaded twice | `gh release upload --clobber` is intentional — re-runs replace assets |

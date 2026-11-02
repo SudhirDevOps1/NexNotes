@@ -73,6 +73,26 @@ Read the full model: [`docs/PRIVACY.md`](docs/PRIVACY.md) · [`docs/SECURITY-ARC
 
 ## 🚀 Quick start
 
+### Desktop app (Windows · Linux)
+
+Installers are attached to every [release](https://github.com/SudhirDevOps1/NexNotes/releases) —
+no Node, no terminal, no Docker:
+
+| Asset | What it is |
+|---|---|
+| `NexNotes-x.y.z-windows-x64-setup.exe` | Windows installer — one click, per-user (`%LOCALAPPDATA%\Programs\NexNotes`), **no admin rights** |
+| `NexNotes-x.y.z-linux-x64.AppImage` | Linux AppImage — `chmod +x`, double-click, done |
+| `nexnotes-vx.y.z-windows-x64.zip` / `nexnotes-vx.y.z-linux-x64.tar.gz` | Portable **server** for self-hosters (needs Node 20+) |
+| `nexnotes-vx.y.z-SHA256SUMS.txt` | SHA-256 checksums for all of the above |
+
+The desktop app is real Electron: it runs its server internally and shows the UI in its own
+window (taskbar icon, name and all). Notes live in `%APPDATA%\NexNotes` (Windows) or
+`~/.config/NexNotes` (Linux) and survive both upgrades and uninstalls.
+
+> **"NSIS Error: Installer integrity check has failed"** almost always means a truncated
+> download. Re-download and verify with
+> `sha256sum -c nexnotes-vx.y.z-SHA256SUMS.txt` (Windows: `certutil -hashfile <file> SHA256`).
+
 ### Docker (recommended)
 
 ```bash
