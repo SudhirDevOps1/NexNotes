@@ -163,3 +163,41 @@ fake, every artifact boot-tested before it reaches a release page.
 lint · tsc · vitest (20 tests) · tarball boot (fresh env) · AppImage FUSE-less
 boot · zip/installer smoke on windows-latest · release PR merged → tag →
 artifacts attached to the GitHub Release.
+
+## 4. v2.2.0 — the desktop app is real (Electron)
+
+2.1.0's desktop story was a node.exe-in-a-zip with hand-written launchers and a
+hand-written NSIS script. It failed in the field exactly where a hand-rolled
+installer fails: the script had no `InstallDir`, so an interactive (non-`/S`)
+install pointed `$INSTDIR` at nothing and aborted with
+**"Can't write: \\INSTALL.txt"** — and the launch experience (console window +
+browser tab at localhost:3000) read as broken even when it worked. Rebuilt on
+Electron per the request "electron se app bne":
+
+1. **`desktop/`** — Electron shell (`src/main.js`): spawns the Next standalone
+   server as a child process using Electron's own binary
+   (`ELECTRON_RUN_AS_NODE=1`, no second Node runtime), waits for
+   `/api/health`, then opens a real window. Single-instance lock, external
+   links go to the system browser, server stdout/stderr → a log file under the
+   user-data dir, and a `server.json` handshake ({port, pid}) written once
+   healthy — CI smoke tests read it instead of guessing ports.
+2. **Data in the OS user-data dir** (`%APPDATA%\NexNotes` / `~/.config/NexNotes`):
+   SQLite + auth secret survive upgrades and uninstalls. First run copies the
+   schema-initialized template db from the bundle (the prisma CLI was measured
+   at +48 MB compressed for a job a 2 MB template does for free).
+3. **electron-builder** replaces the hand-written NSIS: one-click per-user
+   install (no UAC, no directory page, `runAfterFinish`), AppImage on Linux.
+   Traps found the hard way and documented in RELEASE_SETUP §7:
+   - extraResources silently drops a root-level `node_modules` → server is
+     staged under `dist/desktop-payload/server/` (wrapper dir defeats the check)
+   - `ELECTRON_RUN_AS_NODE` children re-use `process.execPath` — no node.exe
+     shipping
+4. **CI** — `build-windows` builds the standalone bundle + installer on
+   windows-latest (per-OS prisma engines), silent-installs via `/S`, boots the
+   installed exe and health-checks it; `build-linux` boot-tests the AppImage
+   under Xvfb (FUSE-less) and the tarball in a fresh dir; `publish` attaches
+   one sha256sum file for every asset.
+
+### Verification gate
+same as 2.1.0, plus: AppImage boot (health + UI shell) verified locally under
+Xvfb; NSIS smoke runs on a real windows runner before anything is published.

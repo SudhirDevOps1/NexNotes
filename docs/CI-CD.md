@@ -20,7 +20,7 @@ free tier for public repositories — no paid services, no external runners.
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| [`release.yml`](../.github/workflows/release.yml) | tag `v*` | GitHub Release with source zip, built server zip and SHA256SUMS |
+| [`release.yml`](../.github/workflows/release.yml) | tag `v*` | GitHub Release: Windows NSIS installer + Linux AppImage (Electron), portable server tar.gz/zip, SHA256SUMS — all boot-tested in CI |
 | [`docker.yml`](../.github/workflows/docker.yml) | tag `v*` | multi-arch image to GHCR (see `docs/SELF-HOSTING.md`) |
 | [`branch-cleanup.yml`](../.github/workflows/branch-cleanup.yml) | PR merged | deletes the merged head branch (except `main`/`develop`) |
 | [`image-optimizer.yml`](../.github/workflows/image-optimizer.yml) | images changed | lossless PNG recompression, opens a reviewable PR if >2% saved |
