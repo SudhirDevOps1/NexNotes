@@ -4,7 +4,8 @@
 # actual weight is the Next.js standalone server staged by
 # scripts/stage-desktop.mjs into dist/server and shipped as an extraResource.
 #
-# Windows: one-click per-user NSIS into %LOCALAPPDATA%\Programs\NexNotes —
+# Windows: one-click per-user NSIS into %LOCALAPPDATA%\Programs\nexnotes-desktop
+# (the folder follows the package name; app and shortcuts show as NexNotes) —
 # no UAC prompt, no directory page, nothing that can fail on a locked-down
 # machine (the hand-rolled installer this replaces failed exactly there).
 # Linux: AppImage.

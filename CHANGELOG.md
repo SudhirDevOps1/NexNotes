@@ -9,9 +9,10 @@ The desktop experience is rebuilt on Electron. Nothing about the web app changed
 
 ### Added — desktop
 - **Windows installer (Electron + NSIS)** — one click, per-user install to
-  `%LOCALAPPDATA%\Programs\NexNotes`, no admin rights, no directory page; the app
-  launches right after setup. Notes live in `%APPDATA%\NexNotes` and survive both
-  upgrades and uninstalls.
+  `%LOCALAPPDATA%\Programs\nexnotes-desktop` (the folder follows the package
+  name; app and shortcuts show as **NexNotes**), no admin rights, no directory
+  page; the app launches right after setup. Notes live in `%APPDATA%\NexNotes`
+  and survive both upgrades and uninstalls.
 - **Linux AppImage (Electron)** — real desktop window with icon and taskbar name,
   no more console-plus-browser-tab launch.
 - **Desktop shell** (`desktop/`) — the Next.js standalone server runs as a child

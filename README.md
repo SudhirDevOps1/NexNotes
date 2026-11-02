@@ -80,7 +80,7 @@ no Node, no terminal, no Docker:
 
 | Asset | What it is |
 |---|---|
-| `NexNotes-x.y.z-windows-x64-setup.exe` | Windows installer — one click, per-user (`%LOCALAPPDATA%\Programs\NexNotes`), **no admin rights** |
+| `NexNotes-x.y.z-windows-x64-setup.exe` | Windows installer — one click, per-user (`%LOCALAPPDATA%\Programs`), **no admin rights** |
 | `NexNotes-x.y.z-linux-x64.AppImage` | Linux AppImage — `chmod +x`, double-click, done |
 | `nexnotes-vx.y.z-windows-x64.zip` / `nexnotes-vx.y.z-linux-x64.tar.gz` | Portable **server** for self-hosters (needs Node 20+) |
 | `nexnotes-vx.y.z-SHA256SUMS.txt` | SHA-256 checksums for all of the above |
