@@ -3,10 +3,10 @@
  * Packages the production standalone build into shippable, versioned artifacts:
  *
  *   nexnotes-v<version>-linux-x64.tar.gz       portable server (run.sh launcher)
- *   nexnotes-v<version>-linux-x64.AppImage     self-contained desktop image
  *   nexnotes-v<version>-windows-x64.zip        portable server (run.cmd launcher)
- *   nexnotes-v<version>-windows-x64-setup.exe  per-user NSIS installer (CI-built)
- *   nexnotes-v<version>-SHA256SUMS.txt         checksums for all of the above
+ *
+ * Checksums are NOT written here — the publish job covers every asset
+ * (server packages + Electron installers) in one SHA256SUMS file.
  *
  * Two things make the packages boot on a truly fresh machine:
  *   1. `prisma db push` ships a schema-initialized db/nexnotes.db — generate
@@ -19,11 +19,9 @@
  *
  * Usage: node scripts/package-release.mjs --standalone .next/standalone --out dist [--node-win path\to\node.exe]
  */
-import { createReadStream } from "node:fs";
 import { readFile, mkdir, rm, cp, writeFile, chmod, readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { createHash } from "node:crypto";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -44,16 +42,6 @@ function parseArgs() {
 function run(cmd, opts) {
   const r = spawnSync(cmd, opts.args ?? [], { stdio: "inherit", ...opts });
   if (r.status !== 0) throw new Error(`${cmd} ${opts.args?.join(" ") ?? ""} failed (exit ${r.status})`);
-}
-
-function sha256(file) {
-  return new Promise((resolve, reject) => {
-    const h = createHash("sha256");
-    createReadStream(file)
-      .on("data", (d) => h.update(d))
-      .on("end", () => resolve(h.digest("hex")))
-      .on("error", reject);
-  });
 }
 
 const RUN_SH = `#!/usr/bin/env bash
@@ -180,16 +168,9 @@ async function main() {
   run("tar", { args: ["-czf", `nexnotes-${v}-linux-x64.tar.gz`, `nexnotes-${v}`] });
   run("zip", { args: ["-qr", `nexnotes-${v}-windows-x64.zip`, `nexnotes-${v}`] });
 
-  const sums = [];
-  for (const f of (await readdir(out)).sort()) {
-    if (f.endsWith(".tar.gz") || f.endsWith(".zip")) {
-      sums.push(`${await sha256(path.join(out, f))}  ${f}`);
-    }
-  }
-  await writeFile(`nexnotes-${v}-SHA256SUMS.txt`, sums.join("\n") + "\n");
   await rm(staging, { recursive: true, force: true });
 
-  console.log("packaged:", sums.join(", "), nodeWin ? "(windows node bundled)" : "");
+  console.log("packaged:", (await readdir(out)).filter((f) => f.startsWith("nexnotes-")).join(", "), nodeWin ? "(windows node bundled)" : "");
 }
 
 main().catch((e) => {

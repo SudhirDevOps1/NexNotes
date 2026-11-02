@@ -9,6 +9,11 @@ name: Release
 #                         the artifact jobs below build from THAT exact tag
 #   manual v* tag push  → same artifact pipeline against the tag (fallback)
 #
+# Desktop artifacts are real Electron apps (desktop/):
+#   windows → one-click per-user NSIS installer, boot-tested silently
+#   linux   → AppImage, boot-tested under Xvfb
+# plus the portable server packages (tar.gz / zip) for self-hosters.
+#
 # CHANGELOG.md is generated from commit messages — never edit it by hand.
 # The app version lives only in package.json (read at build time by
 # src/lib/version.ts), so health endpoint, UI and artifacts cannot drift.
@@ -94,14 +99,14 @@ jobs:
           # creates are ignored by other workflows (anti-recursion rule).
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
-  build-artifacts:
-    name: Build release artifacts
+  build-linux:
+    name: Linux — portable server + Electron AppImage
     # release-please is skipped on tag builds, so the needs gate must be
     # evaluated explicitly — a plain `needs` would silently skip tag builds.
     needs: [quality-gate, release-please]
     if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-22.04 # oldest runner → AppImage/glibc works on older distros
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
       AUTH_SECRET: release-build-secret-not-for-production
@@ -111,6 +116,10 @@ jobs:
           # release path: the exact tag release-please just created;
           # manual path: the pushed v* tag. Builds never run off main.
           ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
+
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -128,20 +137,15 @@ jobs:
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
 
-      - name: Fetch the Windows Node runtime that ships inside the zip/installer
+      - name: Fetch the Windows Node runtime that ships inside the portable zip
         run: |
           NODE_VER=22.14.0
           curl -fsSL -o /tmp/node-win.zip "https://nodejs.org/dist/v${NODE_VER}/node-v${NODE_VER}-win-x64.zip"
           unzip -o -q /tmp/node-win.zip -d /tmp/node-win "*/node.exe"
           echo "NODE_WIN=$(find /tmp/node-win -name node.exe | head -1)" >> "$GITHUB_ENV"
 
-      - name: Package linux tarball + windows zip + checksums
+      - name: Package portable server (linux tarball + windows zip)
         run: node scripts/package-release.mjs --standalone .next/standalone --out dist --node-win "$NODE_WIN"
-
-      - name: Build Linux AppImage
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          bash scripts/build-appimage.sh "$VERSION" .next/standalone dist
 
       - name: Boot-test packaged tarball
         run: |
@@ -158,144 +162,140 @@ jobs:
           pkill -f "node server.js" || true
           echo "tarball boot: ok"
 
-      - name: Boot-test AppImage (FUSE-less)
+      - name: Stage the server bundle for the Electron shell
+        run: node scripts/stage-desktop.mjs --os linux
+
+      - name: Build the Electron AppImage
         run: |
-          cd dist
-          chmod +x nexnotes-*-linux-x64.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 PORT=4598 ./nexnotes-*-linux-x64.AppImage &
-          for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:4598/api/health | grep -q '"ok":true' && break
+          cd desktop
+          bun install --frozen-lockfile
+          node node_modules/electron-builder/cli.js --linux --publish never
+          ls -la dist/*.AppImage
+
+      - name: Boot-test the AppImage (Xvfb, FUSE-less)
+        run: |
+          command -v Xvfb >/dev/null 2>&1 || sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+          APPIMAGE=$(ls desktop/dist/NexNotes-*-linux-x64.AppImage)
+          cp "$APPIMAGE" dist/
+          chmod +x dist/$(basename "$APPIMAGE")
+          rm -rf ~/.config/NexNotes
+          Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
+          sleep 2
+          # --no-sandbox is a CI-runner-only flag: the runner user cannot use
+          # the chrome setuid sandbox inside a FUSE-less extraction. End-user
+          # machines are unaffected.
+          APPIMAGE_EXTRACT_AND_RUN=1 DISPLAY=:99 \
+            dist/$(basename "$APPIMAGE") --no-sandbox >/tmp/appimage-boot.log 2>&1 &
+          HANDSHAKE="$HOME/.config/NexNotes/server.json"
+          ok=""
+          for i in $(seq 1 60); do
+            if [ -f "$HANDSHAKE" ]; then ok=1; break; fi
             sleep 2
           done
-          curl -sf http://127.0.0.1:4598/api/health | grep -q '"ok":true' \
-            || { echo "::error::AppImage failed to boot"; exit 1; }
-          pkill -f "usr/bin/node" || true
-          echo "AppImage boot: ok"
+          if [ -z "$ok" ]; then
+            echo "::error::AppImage never wrote the handshake file"
+            grep -viE "dbus|Bus|object_proxy" /tmp/appimage-boot.log | tail -30
+            exit 1
+          fi
+          PORT=$(node -p "require('$HANDSHAKE').port")
+          for i in $(seq 1 15); do
+            curl -sf "http://127.0.0.1:$PORT/api/health" | grep -q '"ok":true' && break
+            sleep 2
+          done
+          curl -sf "http://127.0.0.1:$PORT/api/health" | grep -q '"ok":true' \
+            || { echo "::error::AppImage server failed the health check"; exit 1; }
+          curl -s "http://127.0.0.1:$PORT/" | grep -q "<title>NexNotes" \
+            || { echo "::error::AppImage UI did not render the app shell"; exit 1; }
+          echo "AppImage boot: ok (port $PORT)"
+          pkill -f appimage_extracted || true
+          pkill Xvfb || true
 
       - uses: actions/upload-artifact@v4
         with:
-          name: release-dist
-          path: dist/
+          name: release-linux
+          path: dist/*
           retention-days: 5
 
-  smoke-windows:
-    name: Boot test windows zip + installer
-    needs: [release-please, build-artifacts]
-    if: ${{ !cancelled() && needs.build-artifacts.result == 'success' }}
+  build-windows:
+    name: Windows — Electron installer (NSIS)
+    needs: [quality-gate, release-please]
+    if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
+    env:
+      DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
+      AUTH_SECRET: release-build-secret-not-for-production
     steps:
       - uses: actions/checkout@v4
         with:
-          # same commit the artifacts were built from
           ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          name: release-dist
-          path: dist
+          bun-version: latest
 
-      - name: Extract, boot, health check (portable zip, system Node)
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Build standalone bundle
         shell: pwsh
         run: |
-          $zip = (Get-ChildItem dist/nexnotes-*-windows-x64.zip | Select-Object -First 1).FullName
-          Expand-Archive $zip -DestinationPath C:\nexnotes
-          # the archive wraps everything in a versioned folder (like the tarball)
-          $app = (Get-ChildItem C:\nexnotes -Directory | Select-Object -First 1).FullName
-          New-Item -ItemType Directory -Force -Path "$app\db" | Out-Null
-          $db = ($app -replace '\\','/') + "/db/smoke.db"
-          $env:PORT = "4599"
-          $env:DATABASE_URL = "file:$db"
-          $env:AUTH_SECRET = "windows-smoke-secret-not-for-production"
-          $p = Start-Process node -ArgumentList "$app\server.js" -WorkingDirectory $app `
-                 -PassThru -NoNewWindow -RedirectStandardOutput C:\nn-out.log -RedirectStandardError C:\nn-err.log
+          bunx next build
+          Copy-Item -Recurse -Force .next/static .next/standalone/.next/static
+          Copy-Item -Recurse -Force public .next/standalone/public
+
+      - name: Stage the server bundle for the Electron shell
+        run: node scripts/stage-desktop.mjs --os win
+
+      - name: Build the Electron installer (NSIS)
+        run: |
+          cd desktop
+          bun install --frozen-lockfile
+          node node_modules/electron-builder/cli.js --win --publish never
+          Get-ChildItem dist/*.exe | ForEach-Object { Write-Host "built: $($_.Name)" }
+
+      - name: Smoke — silent install, boot, health check
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem desktop/dist/NexNotes-*-windows-x64-setup.exe | Select-Object -First 1).FullName
+          Write-Host "installer: $exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "/S" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "installer exited with $($p.ExitCode)" }
+          $app = "$env:LOCALAPPDATA\Programs\NexNotes\NexNotes.exe"
+          if (-not (Test-Path $app)) { throw "per-user install dir is missing NexNotes.exe ($app)" }
+
+          Start-Process -FilePath $app
+          $handshake = "$env:APPDATA\NexNotes\server.json"
           $ok = $false
-          foreach ($i in 1..30) {
-            try {
-              $r = Invoke-RestMethod -Uri http://127.0.0.1:4599/api/health -TimeoutSec 2
-              if ($r.ok) { $ok = $true; break }
-            } catch { Start-Sleep -Seconds 2 }
+          foreach ($i in 1..60) {
+            if (Test-Path $handshake) { $ok = $true; break }
+            Start-Sleep -Seconds 2
           }
-          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
           if (-not $ok) {
-            "--- stdout ---"; Get-Content C:\nn-out.log -ErrorAction SilentlyContinue
-            "--- stderr ---"; Get-Content C:\nn-err.log -ErrorAction SilentlyContinue
-            throw "Windows zip failed the boot test"
+            $log = "$env:APPDATA\NexNotes\logs\server.log"
+            if (Test-Path $log) { "--- server log ---"; Get-Content $log -Tail 40 }
+            throw "installed app never wrote the handshake file (120s)"
           }
-          Write-Host "windows boot: ok (version $($r.version))"
-
-      - name: Build the per-user installer (NSIS)
-        shell: pwsh
-        run: |
-          # NSIS left the preinstalled-software list on windows-latest — pull it
-          # fresh from chocolatey (shim lands on PATH automatically)
-          choco install nsis -y --no-progress
-          $makensis = (Get-Command makensis -ErrorAction SilentlyContinue).Source
-          if (-not $makensis) { $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe" }
-          Write-Host "using makensis: $makensis"
-          $ver = ((Get-ChildItem dist/nexnotes-*-windows-x64.zip).Name -replace 'nexnotes-v','' -replace '-windows-x64.zip','')
-          # extract a pristine copy — C:\nexnotes now carries smoke-test files
-          Expand-Archive dist/nexnotes-v$ver-windows-x64.zip -DestinationPath C:\nexnotes-pkg
-          $src = (Get-ChildItem C:\nexnotes-pkg -Directory | Select-Object -First 1).FullName
-          # every define goes in quotes — bare -DX=$var tokens reached makensis
-          # unexpanded on the runner (PS passed the literal `$ver`). OUTFILE must
-          # be ABSOLUTE too: makensis resolves a relative OutFile against the
-          # script's own folder (scripts\dist\... — which does not exist).
-          & $makensis "-DVERSION=$ver" "-DSRCDIR=$src" "-DOUTFILE=$PWD\dist\nexnotes-v$ver-windows-x64-setup.exe" "scripts/installer.nsi"
-          if ($LASTEXITCODE -ne 0) { throw "makensis exited with $LASTEXITCODE" }
-          if (-not (Test-Path "dist\nexnotes-v$ver-windows-x64-setup.exe")) { throw "makensis produced no installer" }
-          Write-Host "installer built: nexnotes-v$ver-windows-x64-setup.exe"
-
-      - name: Silent-install the installer, then boot what the user would get
-        shell: pwsh
-        run: |
-          $ver = ((Get-ChildItem dist/nexnotes-*-windows-x64-setup.exe).Name -replace 'nexnotes-v','' -replace '-windows-x64-setup.exe','')
-          $proc = Start-Process -FilePath "dist\nexnotes-v$ver-windows-x64-setup.exe" `
-                    -ArgumentList "/S","/D=C:\nn-installed" -Wait -PassThru
-          if ($proc.ExitCode -ne 0) { throw "installer exited with $($proc.ExitCode)" }
-          if (-not (Test-Path 'C:\nn-installed\server.js')) { throw "install dir is missing server.js" }
-          if (-not (Test-Path 'C:\nn-installed\bin\node.exe')) { throw "bundled node.exe missing" }
-
-          $env:PORT = "4600"
-          $env:NEXNOTES_NO_BROWSER = "1"
-          Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
-          Remove-Item Env:AUTH_SECRET -ErrorAction SilentlyContinue
-          # -NoNewWindow and -WindowStyle are mutually exclusive in Start-Process
-          # redirect the cmd's own output to a file so a silent failure is
-          # diagnosable from this log alone
-          $p = Start-Process cmd -ArgumentList '/c','C:\nn-installed\nexnotes.cmd > C:\nn-cmd.log 2>&1' `
-                 -PassThru -NoNewWindow
-          $ok = $false
-          $r = $null
-          foreach ($i in 1..30) {
-            try {
-              $r = Invoke-RestMethod -Uri http://127.0.0.1:4600/api/health -TimeoutSec 2
-              if ($r.ok) { $ok = $true; break }
-            } catch {
-              try { (Invoke-WebRequest -UseBasicParsing -Uri http://127.0.0.1:4600/api/health -TimeoutSec 2).Content > C:\nn-health-last.txt } catch {}
-              Start-Sleep -Seconds 2
-            }
-          }
-          taskkill /PID $p.Id /T /F 2>$null | Out-Null
-          if (-not $ok) {
-            "--- nexnotes.cmd output ---"; Get-Content C:\nn-cmd.log -ErrorAction SilentlyContinue
-            "--- last health response ---"; Get-Content C:\nn-health-last.txt -ErrorAction SilentlyContinue
-            "--- installed root ---"; (Get-ChildItem C:\nn-installed | Select-Object -ExpandProperty Name) -join ', '
-            "--- installed db dir ---"; Get-ChildItem C:\nn-installed\db -ErrorAction SilentlyContinue | ForEach-Object { "$($_.Name) $($_.Length)" }
-            throw "installed app failed the boot test"
-          }
-          Write-Host "installed app boot: ok (version $($r.version), data in install-dir\db)"
+          $port = (Get-Content $handshake | ConvertFrom-Json).port
+          $r = Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 10
+          if (-not $r.ok) { throw "health endpoint returned ok=$($r.ok)" }
+          if (-not (Test-Path "$env:APPDATA\NexNotes\nexnotes.db")) { throw "user-data db was not seeded" }
+          Write-Host "installed app boot: ok (version $($r.version), port $port, data in %APPDATA%\NexNotes)"
+          taskkill /IM NexNotes.exe /T /F 2>$null | Out-Null
 
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
-          path: dist/*-setup.exe
+          name: release-windows
+          path: desktop/dist/*.exe
           retention-days: 5
 
   publish:
     name: Attach artifacts to the GitHub Release
-    needs: [release-please, build-artifacts, smoke-windows]
-    if: ${{ !cancelled() && needs.build-artifacts.result == 'success' && needs.smoke-windows.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
+    needs: [release-please, build-linux, build-windows]
+    if: ${{ !cancelled() && needs.build-linux.result == 'success' && needs.build-windows.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -303,24 +303,24 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: release-dist
+          name: release-linux
           path: dist
 
       - uses: actions/download-artifact@v4
         with:
-          name: windows-installer
+          name: release-windows
           path: dist
 
-      - name: Upload assets
+      - name: Checksums + upload
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # no checkout in this job — gh needs GH_REPO to know where to look
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release-please.outputs.tag_name || github.ref_name }}
         run: |
+          node scripts/make-sums.mjs dist "nexnotes-${TAG}-SHA256SUMS.txt"
           gh release view "$TAG" >/dev/null 2>&1 || \
             gh release create "$TAG" --generate-notes --title "NexNotes $TAG"
-          # nexnotes-* only — dist can carry build tooling that is not an asset
-          gh release upload "$TAG" dist/nexnotes-* --clobber
+          gh release upload "$TAG" dist/* --clobber
           echo "attached to $TAG:"
           ls -la dist/
