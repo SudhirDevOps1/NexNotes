@@ -317,6 +317,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # make-sums.mjs lives in the repo and the first v2.2.0 tag build proved
+      # the publish job dies on its first line without it — a shallow checkout
+      # is cheaper than inlining the checksum format into the workflow
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: release-linux
@@ -330,7 +335,8 @@ jobs:
       - name: Checksums + upload
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # no checkout in this job — gh needs GH_REPO to know where to look
+          # gh reads the repo from the checkout, but being explicit costs
+          # nothing and keeps the step honest if the checkout ever goes away
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release-please.outputs.tag_name || github.ref_name }}
         run: |
