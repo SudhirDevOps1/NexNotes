@@ -2,10 +2,10 @@
 /**
  * Stages the Next.js standalone server for the Electron desktop shell.
  *
- *   dist/desktop-payload/server/    — copied from .next/standalone
+ *   build/desktop-payload/server/   — copied from .next/standalone
  *                                     (build step must already have put
  *                                     .next/static + public inside it)
- *   dist/desktop-payload/server/db/nexnotes.db — schema-initialized template db
+ *   build/desktop-payload/server/db/nexnotes.db — schema-initialized template db
  *
  * The desktop app copies the template into the OS user-data dir on first
  * launch (desktop/src/main.js → seedDatabase) and never touches the copy
@@ -21,7 +21,7 @@
  * artifact names can never drift from the release tag.
  *
  * Usage: node scripts/stage-desktop.mjs [--standalone .next/standalone]
- *                                       [--out dist/desktop-payload/server]
+ *                                       [--out build/desktop-payload/server]
  *                                       [--os linux|win]
  */
 import { readFile, mkdir, rm, cp, writeFile, readdir } from "node:fs/promises";
@@ -39,11 +39,15 @@ function parseArgs() {
   };
   return {
     standalone: path.resolve(get("--standalone", path.join(ROOT, ".next/standalone"))),
-    // NOTE — the extra "desktop-payload" level is load-bearing: electron-builder
-    // unconditionally ignores a ROOT-level node_modules dir in extraResources
-    // (app-builder-lib out/util/filter.js), so the bundle must be nested one
-    // level down for node_modules to reach the installers
-    out: path.resolve(get("--out", path.join(ROOT, "dist/desktop-payload/server"))),
+    // NOTE — two things about this path. First, the extra "desktop-payload"
+    // level is load-bearing: electron-builder unconditionally ignores a
+    // ROOT-level node_modules dir in extraResources (app-builder-lib
+    // out/util/filter.js), so the bundle must be nested one level down for
+    // node_modules to reach the installers. Second, it stages under build/
+    // on purpose, NOT dist/ — dist/ is what the release job uploads as
+    // artifacts, and the first v2.2.0 tag build shipped the whole staged
+    // server (~1300 files) to the publish step that way.
+    out: path.resolve(get("--out", path.join(ROOT, "build/desktop-payload/server"))),
     os: get("--os", process.platform === "win32" ? "win" : "linux"),
   };
 }
@@ -121,7 +125,7 @@ async function main() {
   await rm(templateDb, { force: true });
 
   const bytes = await dirSize(out);
-  console.log(`staged dist/server (${os}): ${(bytes / 1048576).toFixed(1)} MB unpacked`);
+  console.log(`staged ${path.relative(ROOT, out)} (${os}): ${(bytes / 1048576).toFixed(1)} MB unpacked`);
 }
 
 main().catch((e) => {

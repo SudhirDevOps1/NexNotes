@@ -26,10 +26,10 @@ extraResources:
   # staged server bundle (Next standalone + template db), nested one level
   # deep on purpose: electron-builder's copy filter hard-codes "a root-level
   # node_modules dir is always ignored" (app-builder-lib out/util/filter.js),
-  # so staging dist/server directly would ship an app that boots to
+  # so staging the bundle directly would ship an app that boots to
   # "Cannot find module 'next'". One wrapper dir defeats that check:
-  # dist/desktop-payload/server/** lands in resources/server/**
-  - from: ../dist/desktop-payload
+  # build/desktop-payload/server/** lands in resources/server/**
+  - from: ../build/desktop-payload
     to: .
     filter:
       - "**/*"
