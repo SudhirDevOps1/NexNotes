@@ -39,7 +39,8 @@ src/app/s/[token]/  public read-only share pages
 src/components/nexnotes/   app-shell, editor (+ rich-text, sheet-editor, totp), note-list,
                     sidebar, settings-dialog, api-integrations, command-palette, stats…
 prisma/             schema.prisma (SQLite) + schema.postgres.prisma (Neon/Postgres)
-scripts/            db-switch.mjs (driver switch), gen-icons.mjs, push-to-github.sh
+scripts/            db-switch.mjs (driver switch), build-brand-assets.mjs,
+                           shoot-showcase.mjs, push-to-github.sh
 docs/               FEATURES, API, SELF-HOSTING, PRIVACY, SECURITY-ARCHITECTURE, PLAN
 ```
 

@@ -1,10 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#10b981"/>
-      <stop offset="1" stop-color="#059669"/>
+    <linearGradient id="grad64" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="0.55" stop-color="#10b981"/><stop offset="1" stop-color="#047857"/>
     </linearGradient>
+    <radialGradient id="sheen64" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#g)"/>
-  <path d="M20 44V20l24 24V20" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+  <path d="M14 0 H50 L64 14 V50
+           A14 14 0 0 1 50 64 H14
+           A14 14 0 0 1 0 50 V14
+           A14 14 0 0 1 14 0 Z" fill="url(#grad64)"/>
+  <ellipse cx="19" cy="12" rx="38" ry="24" fill="url(#sheen64)" opacity="0.18"/>
+  <path d="M50 0 L50 14 L64 14 Z" fill="#ffffff" opacity="0.30"/>
+  <path d="M20 44 V20 L44 44 V20"
+        fill="none" stroke="#ffffff" stroke-width="5.75"
+        stroke-linecap="round" stroke-linejoin="round"/></svg>

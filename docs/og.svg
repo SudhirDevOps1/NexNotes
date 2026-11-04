@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  
+  <defs>
+    <radialGradient id="glowL" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#10b981" stop-opacity="0.13"/><stop offset="1" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="44" height="44" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.5" fill="#34d399" fill-opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#0b1512"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+  <circle cx="168" cy="0" r="725" fill="url(#glowL)"/>
+  <circle cx="1032" cy="630" r="662" fill="url(#glowL)"/>
+  <g transform="translate(530,64)">
+  <defs>
+    <linearGradient id="grad140" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="0.55" stop-color="#10b981"/><stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <radialGradient id="sheen140" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path d="M30.625 0 H109.375 L140 30.625 V109.375
+           A30.625 30.625 0 0 1 109.375 140 H30.625
+           A30.625 30.625 0 0 1 0 109.375 V30.625
+           A30.625 30.625 0 0 1 30.625 0 Z" fill="url(#grad140)"/>
+  <ellipse cx="41.5625" cy="26.25" rx="83.125" ry="52.5" fill="url(#sheen140)" opacity="0.18"/>
+  <path d="M109.375 0 L109.375 30.625 L140 30.625 Z" fill="#ffffff" opacity="0.30"/>
+  <path d="M43.75 96.25 V43.75 L96.25 96.25 V43.75"
+        fill="none" stroke="#ffffff" stroke-width="12.578125"
+        stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="600" y="308" text-anchor="middle" font-family="Noto Sans SC" font-weight="700" font-size="94" letter-spacing="-1.5" fill="#ffffff">Nex<tspan fill="#34d399">Notes</tspan></text>
+  <text x="600" y="362" text-anchor="middle" font-family="Noto Sans SC" font-weight="400" font-size="30" fill="#9fb8ae">Local-first · End-to-end encrypted · Every premium feature free</text>
+  <rect x="177" y="408" width="155" height="46" rx="23" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="197" y="431" font-family="Sarasa Mono SC" font-weight="600" font-size="24" fill="#d7e8e1" dominant-baseline="central">Markdown</text><rect x="346" y="408" width="112" height="46" rx="23" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="366" y="431" font-family="Sarasa Mono SC" font-weight="600" font-size="24" fill="#d7e8e1" dominant-baseline="central">KaTeX</text><rect x="472" y="408" width="213" height="46" rx="23" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="492" y="431" font-family="Sarasa Mono SC" font-weight="600" font-size="24" fill="#d7e8e1" dominant-baseline="central">Spreadsheets</text><rect x="699" y="408" width="155" height="46" rx="23" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="719" y="431" font-family="Sarasa Mono SC" font-weight="600" font-size="24" fill="#d7e8e1" dominant-baseline="central">TOTP 2FA</text><rect x="868" y="408" width="155" height="46" rx="23" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="888" y="431" font-family="Sarasa Mono SC" font-weight="600" font-size="24" fill="#d7e8e1" dominant-baseline="central">REST API</text>
+  <text x="600" y="560" text-anchor="middle" font-family="Sarasa Mono SC" font-size="23" fill="#9fb8ae" fill-opacity="0.6">open-source · AGPL-3.0 · self-hostable · no telemetry</text>
+</svg>
