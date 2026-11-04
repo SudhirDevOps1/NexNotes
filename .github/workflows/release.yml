@@ -105,7 +105,9 @@ jobs:
     # evaluated explicitly — a plain `needs` would silently skip tag builds.
     needs: [quality-gate, release-please]
     if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
-    runs-on: ubuntu-22.04 # oldest runner → AppImage/glibc works on older distros
+    # ubuntu-22.04 is in deprecation brownouts (support ended 2026-09-17) and
+    # silently refuses to schedule jobs — build on the current LTS instead.
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
       DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
