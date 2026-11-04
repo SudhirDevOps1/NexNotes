@@ -208,6 +208,48 @@ async function persistNote(state: AppState, note: UiNote): Promise<UiNote> {
   return row;
 }
 
+/** Decrypt every account-encrypted (nxenc) note in memory with the vault key.
+ *  The in-memory contract is "plaintext for the UI" (see the header above) —
+ *  this is the one place ciphertext is allowed to turn back into plaintext in
+ *  bulk. A note that fails to decrypt KEEPS its ciphertext: the editor renders
+ *  a vault gate for it instead of silently showing an empty note. */
+async function decryptVaultInMemory(
+  key: CryptoKey,
+  notes: Record<string, UiNote>
+): Promise<Record<string, UiNote>> {
+  const out: Record<string, UiNote> = {};
+  for (const [id, n] of Object.entries(notes)) {
+    if (isEncrypted(n.content) && !isLockEncrypted(n.content)) {
+      try {
+        out[id] = { ...n, content: await decryptText(key, n.content) };
+      } catch {
+        out[id] = n; // undecryptable — UI shows the vault gate, never gibberish/empty
+      }
+    } else {
+      out[id] = n;
+    }
+  }
+  return out;
+}
+
+/** Encrypt note rows for the wire / IndexedDB when E2E is active.
+ *  Memory is plaintext for the UI; anything leaving the process — sync push
+ *  body or the idb snapshot sync() writes back — must be ciphertext again.
+ *  Rows already carrying nxenc/nxlock ciphertext pass through untouched. */
+async function encryptRowsForIdb(
+  state: AppState,
+  notes: Record<string, UiNote>
+): Promise<Record<string, UiNote>> {
+  if (!state.user?.encryptionEnabled || !state.encKey) return notes;
+  const out: Record<string, UiNote> = {};
+  for (const [id, n] of Object.entries(notes)) {
+    out[id] = isEncrypted(n.content)
+      ? n
+      : { ...n, content: await encryptText(state.encKey, n.content) };
+  }
+  return out;
+}
+
 function parse(json: unknown): unknown {
   return json;
 }
@@ -468,6 +510,9 @@ export const useApp = create<AppStore>((set, get) => ({
         return;
       }
       set({ encKey: key });
+      // v2.2 bugfix — hydrated IndexedDB rows carry nxenc ciphertext; decrypt
+      // them now, or the editor/previews would render raw ciphertext.
+      set({ notes: await decryptVaultInMemory(key, get().notes) });
     }
 
     await get().sync(true);
@@ -498,6 +543,7 @@ export const useApp = create<AppStore>((set, get) => ({
           return;
         }
         set({ encKey: key });
+        set({ notes: await decryptVaultInMemory(key, get().notes) }); // same fix as boot()
       }
       await get().sync(true);
       void refreshFiles(set, get);
@@ -553,7 +599,13 @@ export const useApp = create<AppStore>((set, get) => ({
 
       for (const n of Object.values(state.notes)) {
         if (n.dirty) {
-          changes.push({ type: "note", op: "upsert", data: { ...n, dirty: undefined } as unknown as NoteDTO });
+          let data = { ...n, dirty: undefined } as unknown as NoteDTO;
+          // v2.2 — memory is plaintext for the UI; the wire must be ciphertext
+          // (locked notes already carry nxlock ciphertext and pass through)
+          if (!isEncrypted(n.content) && state.user?.encryptionEnabled && state.encKey) {
+            data = { ...data, content: await encryptText(state.encKey, n.content) };
+          }
+          changes.push({ type: "note", op: "upsert", data });
           pushedIds.add(n.id);
         }
       }
@@ -602,7 +654,9 @@ export const useApp = create<AppStore>((set, get) => ({
             delete cleaned[sn.id]; // replaced below without the cached plaintext
           }
         } else if (isEncrypted(content) && now.encKey) {
-          try { content = await decryptText(now.encKey, content); } catch { content = ""; }
+          // v2.2 bugfix — on a decrypt failure keep the ciphertext (the editor
+          // shows a vault gate for it); blanking the note hid real data.
+          try { content = await decryptText(now.encKey, content); } catch { /* keep ciphertext */ }
         }
         cleaned[sn.id] = { ...sn, content, dirty: false };
       }
@@ -675,8 +729,10 @@ export const useApp = create<AppStore>((set, get) => ({
         else dropCachedNoteKey(id);
       }
 
-      // 4. persist
-      await idbPut("notes", Object.values(finalNotes));
+      // 4. persist — rows go back to IndexedDB as ciphertext when E2E is on
+      // (v2.2 bugfix: this snapshot used to write memory as-is, which turned
+      // into plaintext-at-rest once memory became plaintext for the UI)
+      await idbPut("notes", Object.values(await encryptRowsForIdb(now, finalNotes)));
       await idbPut("folders", Object.values(finalFolders));
       await idbPut("tags", Object.values(finalTags));
       await idbSetMeta("lastSyncAt", res.serverTime);
@@ -734,7 +790,8 @@ export const useApp = create<AppStore>((set, get) => ({
       dirty: true,
     };
     const persisted = await persistNote(state, note);
-    set((s) => ({ notes: { ...s.notes, [id]: persisted } }));
+    // in-memory stays plaintext for the UI — only the IndexedDB row is ciphertext
+    set((s) => ({ notes: { ...s.notes, [id]: { ...persisted, content: note.content } } }));
     set({ selectedNoteId: id, mobilePane: "editor" });
     schedulePush(get());
     return id;
@@ -745,6 +802,18 @@ export const useApp = create<AppStore>((set, get) => ({
     const prev = state.notes[id];
     if (!prev) return;
     const t = new Date().toISOString();
+
+    // v2.2 bugfix — vault locked: refuse edits that would write over account
+    // ciphertext. Saving text typed into a not-yet-decrypted note used to
+    // encrypt the ciphertext a second time and destroy the note for good.
+    const prevIsCipher = isEncrypted(prev.content) && !isLockEncrypted(prev.content);
+    if (
+      prevIsCipher && !state.encKey && !prev.locked &&
+      (patch.title !== undefined || patch.content !== undefined)
+    ) {
+      return;
+    }
+
     let next: UiNote = { ...prev, ...patch, updatedAt: t, dirty: true };
 
     // locked notes: re-encrypt plaintext edits with the per-note key
@@ -763,7 +832,11 @@ export const useApp = create<AppStore>((set, get) => ({
     }
 
     const persisted = await persistNote(state, next);
-    set((s) => ({ notes: { ...s.notes, [id]: persisted } }));
+    // in-memory stays plaintext for the UI (header contract). Locked notes are
+    // the exception: their nxlock ciphertext stays in memory and the plaintext
+    // lives only in `unlockedNotes` for this session.
+    const uiRow: UiNote = prev.locked ? persisted : { ...persisted, content: next.content };
+    set((s) => ({ notes: { ...s.notes, [id]: uiRow } }));
     schedulePush(get());
   },
 
@@ -996,7 +1069,26 @@ export const useApp = create<AppStore>((set, get) => ({
   },
 
   async restoreVersion(noteId, version) {
-    await get().updateNote(noteId, { title: version.title, content: version.content });
+    const state = get();
+    let { title, content } = version;
+    // v2.2 bugfix — history versions can come back as ciphertext; restoring
+    // one raw used to double-encrypt the note. Decrypt first, refuse clearly
+    // when we can't.
+    if (isLockEncrypted(content)) {
+      const noteKey = getCachedNoteKey(noteId);
+      if (!noteKey) throw new Error("Unlock the note to restore this version");
+      content = await decryptText(noteKey, content);
+      if (isLockEncrypted(title)) title = await decryptText(noteKey, title);
+    } else if (isEncrypted(content)) {
+      if (!state.encKey) throw new Error("Unlock the vault to restore this version");
+      try {
+        content = await decryptText(state.encKey, content);
+        if (isEncrypted(title)) title = await decryptText(state.encKey, title);
+      } catch {
+        throw new Error("This version cannot be decrypted with the current vault key");
+      }
+    }
+    await get().updateNote(noteId, { title, content });
     toast.success("Version restored", {
       description: "The current version was saved to history automatically.",
     });
@@ -1272,12 +1364,14 @@ export const useApp = create<AppStore>((set, get) => ({
     set({ user, encKey: key });
     await idbSetMeta("lastUser", user);
 
-    // re-encrypt every note in IndexedDB
+    // re-encrypt every note in IndexedDB — the in-memory store stays plaintext
+    // (v2.2 bugfix: swapping the encrypted rows into memory is what made every
+    // note render as raw nxenc ciphertext right after enabling encryption)
     const notes = { ...get().notes };
     for (const n of Object.values(notes)) {
       if (isLockEncrypted(n.content)) continue; // already double-protected
       const persisted = await persistNote(get(), { ...n, dirty: true });
-      notes[n.id] = persisted;
+      notes[n.id] = { ...persisted, content: n.content };
     }
     set({ notes });
     schedulePush(get(), 0);
@@ -1311,7 +1405,7 @@ export const useApp = create<AppStore>((set, get) => ({
     for (const n of Object.values(notes)) {
       if (isLockEncrypted(n.content)) continue; // keep note-lock layer intact
       const persisted = await persistNote(get(), { ...n, isEncrypted: false, dirty: true });
-      notes[n.id] = persisted;
+      notes[n.id] = { ...persisted, content: n.content }; // memory stays plaintext
     }
     set({ notes });
     schedulePush(get(), 0);
@@ -1321,26 +1415,33 @@ export const useApp = create<AppStore>((set, get) => ({
     const state = get();
     if (!state.user) throw new Error("Not signed in");
     const key = await deriveKey(state.user.email, password);
-    const anyEnc = Object.values(state.notes).find((n) => isEncrypted(n.content) && !isLockEncrypted(n.content));
-    if (anyEnc) {
-      try {
-        await decryptText(key, anyEnc.content);
-      } catch {
-        throw new Error("Wrong password");
+    // Verify the password against the data: at least ONE note must decrypt.
+    // (v2.2 bugfix — the probe used to be one arbitrary encrypted note, so a
+    // single stray note encrypted with a different/lost key could lock the
+    // correct password out forever. PBKDF2 dominates the cost of the extra
+    // AES-GCM attempts, so trying notes in order is still fail-fast in practice.)
+    const encNotes = Object.values(state.notes).filter(
+      (n) => isEncrypted(n.content) && !isLockEncrypted(n.content)
+    );
+    if (encNotes.length) {
+      let verified = false;
+      for (const n of encNotes) {
+        try {
+          await decryptText(key, n.content);
+          verified = true;
+          break;
+        } catch {
+          /* try the next note */
+        }
       }
+      if (!verified) throw new Error("Wrong password");
     }
     cacheKey(state.user.id, key);
     await serializeKey(state.user.id, key);
     set({ encKey: key, status: "ready" });
-    // decrypt everything in memory
-    const notes = { ...get().notes };
-    for (const n of Object.values(notes)) {
-      if (isEncrypted(n.content) && !isLockEncrypted(n.content)) {
-        try { notes[n.id] = { ...n, content: await decryptText(key, n.content) }; }
-        catch { notes[n.id] = { ...n, content: "" }; }
-      }
-    }
-    set({ notes });
+    // decrypt everything in memory (undecryptable notes keep their ciphertext —
+    // the editor shows a vault gate instead of an empty note)
+    set({ notes: await decryptVaultInMemory(key, get().notes) });
     void get().sync(true);
     void refreshFiles(set, get);
   },

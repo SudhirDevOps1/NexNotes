@@ -19,6 +19,7 @@ import {
 import { useApp, selectVisibleNotes, noteDisplayTitle, type SortMode } from "@/lib/store";
 import type { NoteType } from "@/lib/types";
 import { tagColor } from "./sidebar";
+import { isEncrypted } from "@/lib/crypto";
 import { FilesPane } from "./files-pane";
 import { cn } from "@/lib/utils";
 
@@ -392,7 +393,10 @@ export function NoteList({ onOpenNav }: { onOpenNav?: () => void }) {
               const title = noteDisplayTitle({ unlockedNotes }, n);
               const plainContent =
                 unlockedNotes[n.id]?.content ??
-                (n.locked ? "••••••••" : n.content);
+                (n.locked ? "••••••••"
+                  // v2.2 — never show raw nxenc ciphertext as the preview
+                  : isEncrypted(n.content) ? "🔒 Encrypted — unlock the vault to preview"
+                  : n.content);
               const snippet = plainContent.replace(/[#>*`~\[\]!\-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 90);
               return (
                 <button

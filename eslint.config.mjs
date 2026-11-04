@@ -47,7 +47,7 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
   // desktop/ is its own CommonJS package (the Electron main process needs
   // require(), and electron-builder ships it with separate tooling) — the
   // web app's ESM-focused lint scope doesn't apply there
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills", "desktop/**", "dist/**", "test-results/**", "playwright-report/**"]
+  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills", "plugins", "desktop/**", "dist/**", "test-results/**", "playwright-report/**"]
 }];
 
 export default eslintConfig;
