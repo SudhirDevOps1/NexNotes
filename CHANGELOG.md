@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.0.2](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.1...v0.0.2) (2026-11-04)
+
+
+### Bug Fixes
+
+* **release:** the release tag must stay plain-v or artifacts never build ([8d31a8c](https://github.com/SudhirDevOps1/NexNotes/commit/8d31a8c02e5a8e97597e3279c9af8eec0cb4cfce))
+
 ## [0.0.1] — 2026-11-02 — "Honest numbers"
 
 **The version resets to `0.0.1`.** NexNotes is in active public development, and
