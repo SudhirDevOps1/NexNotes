@@ -7,15 +7,15 @@
   self-hostable in one command, and **zero paid gates**. Think *"Vaultwarden for your notes."*
 
   [![CI](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/ci.yml)
+  [![e2e-gate](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/e2e-gate.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/e2e-gate.yml)
   [![CodeQL](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/codeql.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/codeql.yml)
   [![codecov](https://codecov.io/gh/SudhirDevOps1/NexNotes/graph/badge.svg)](https://codecov.io/gh/SudhirDevOps1/NexNotes)
   [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/SudhirDevOps1/NexNotes/badge)](https://scorecard.dev/viewer/?uri=github.com/SudhirDevOps1/NexNotes)
   [![Release](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/release.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/release.yml)
-  [![CodeRabbit Pull Request Reviews](https://img.shields.io/endpoint?url=https://coderabbit.ai/badge.svg)](https://coderabbit.ai)
   [![Docker](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+  [![Status: 0.x — in development](https://img.shields.io/badge/status-0.x%20in%20development-orange)](docs/VERSIONING.md)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-  [![Node](https://img.shields.io/badge/node-%E2%89%A520-339933)](package.json)
 
   ### 🧪 Instant demo (built into every instance)
 
@@ -26,7 +26,7 @@
   *The login screen has a one-click **Demo login** button — the account is auto-seeded with 20+
   example notes covering every feature (code highlighting, spreadsheets, authenticator, HTML…).*
 
-  ![NexNotes main screen](docs/screenshots/desktop-notes.png)
+  ![NexNotes — notes list, rendered markdown editor, tags and folders](docs/screenshots/desktop-notes.png)
 
 </div>
 
@@ -59,6 +59,57 @@ plus things it doesn't have. No accounts to rent, no upgrade walls, no telemetry
 | — | ➕ Multi-database: **SQLite (default) · Neon Postgres** switchable |
 
 Full comparison: [`docs/FEATURES.md`](docs/FEATURES.md)
+
+## 🖼️ Feature showcase
+
+Every note type and every tool, as it actually looks in the app.
+
+### Editors — seven ways to write
+
+| | |
+|---|---|
+| ![Rich text WYSIWYG](docs/screenshots/richtext-wysiwyg.png) | ![KaTeX math + wiki links](docs/screenshots/editor-math-wikilinks.png) |
+| *Rich text (WYSIWYG) — stored as plain markdown underneath* | *Markdown with KaTeX math and clickable `[[wiki links]]`* |
+| ![Prism syntax highlighting](docs/screenshots/code-highlighting.png) | ![Spreadsheets](docs/screenshots/spreadsheet.png) |
+| *Code notes — Prism highlighting, 40+ languages, line numbers, copy* | *Spreadsheet notes — formulas, rows and columns in a note* |
+| ![Task notes](docs/screenshots/task-note.png) | ![HTML notes](docs/screenshots/html-sandbox.png) |
+| *Task notes — interactive checklists* | *HTML notes rendered in a sandboxed iframe (scripts off)* |
+| ![Authenticator](docs/screenshots/authenticator.png) | ![Templates](docs/screenshots/templates.png) |
+| *Authenticator notes — live TOTP codes, generated on-device* | *One-click templates: journal, meeting notes, bug report…* |
+
+### Think & link
+
+| | |
+|---|---|
+| ![Backlinks](docs/screenshots/backlinks.png) | ![Find & replace + search](docs/screenshots/search.png) |
+| *Backlinks panel — every note that links here* | *Debounced full-text search, unlock-aware* |
+| ![Command palette](docs/screenshots/command-palette.png) | ![Smart views](docs/screenshots/smart-views-batch.png) |
+| *Command palette — `Ctrl+K` for notes, actions, navigation* | *Smart views — save any search as a living filter* |
+
+### Organise & operate
+
+| | |
+|---|---|
+| ![Batch operations](docs/screenshots/batch-operations.png) | ![Files pane](docs/screenshots/files-pane.png) |
+| *Batch operations — select → tag / move / merge / export / trash* | *Files library — E2E-encryptable attachments* |
+| ![Note history](docs/screenshots/history-dialog.png) | ![Live stats](docs/screenshots/stats-dialog.png) |
+| *Note history — automatic snapshots, one-click restore* | *Stats — words, streaks and writing rhythms, live* |
+
+### Privacy & security
+
+| | |
+|---|---|
+| ![Locked note](docs/screenshots/lock-dialog.png) | ![2FA setup](docs/screenshots/twofa-setup.png) |
+| *Per-note passwords — AES-GCM ciphertext server-side* | *TOTP 2FA with QR + single-use backup codes* |
+| ![API tokens](docs/screenshots/api-tokens.png) | ![Public share page](docs/screenshots/share-page.png) |
+| *REST API tokens — stored hash-only* | *Read-only public share links — noindex, revocable* |
+
+### Everywhere you are
+
+| | |
+|---|---|
+| ![Themes](docs/screenshots/settings-themes.png) | ![Mobile](docs/screenshots/mobile-responsive.png) |
+| *Nord, Solarized, Rosé Pine, Gruvbox, Tokyo Night — all free* | *Fully responsive — same data on the phone* |
 
 ## 🔐 Privacy-first, by architecture
 
@@ -121,16 +172,19 @@ bun run dev
 
 Details: [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md)
 
-## 🧭 Tour
+## 📚 Documentation
 
-| | |
+| Doc | What's inside |
 |---|---|
-| ![Editor with math & wiki links](docs/screenshots/editor-math-wikilinks.png) | ![Settings & themes](docs/screenshots/settings-themes.png) |
-| *KaTeX math + clickable wiki links + backlinks* | *Premium theme presets — all free* |
-| ![2FA setup](docs/screenshots/twofa-setup.png) | ![WYSIWYG editor](docs/screenshots/richtext-wysiwyg.png) |
-| *Account 2FA with QR + backup codes* | *Rich text editor (markdown underneath)* |
-| ![Share page](docs/screenshots/share-page.png) | ![Mobile](docs/screenshots/mobile-responsive.png) |
-| *Public read-only share links* | *Fully responsive* |
+| [`docs/FEATURES.md`](docs/FEATURES.md) | Full feature matrix vs Standard Notes |
+| [`docs/API.md`](docs/API.md) · [`docs/PRIVACY.md`](docs/PRIVACY.md) | REST API reference · the privacy model |
+| [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md) | Docker, SQLite/Postgres, backups, reverse proxy |
+| [`docs/SECURITY-ARCHITECTURE.md`](docs/SECURITY-ARCHITECTURE.md) | Threat model, crypto choices, sandboxing |
+| [`docs/VERSIONING.md`](docs/VERSIONING.md) | The 0.x versioning policy + 1.0.0 graduation checklist |
+| [`docs/CI-CD.md`](docs/CI-CD.md) | The 13-workflow pipeline, tier by tier |
+| [`docs/BRANCH-PROTECTION.md`](docs/BRANCH-PROTECTION.md) | Branch protection & rulesets — exact settings |
+| [`docs/RELEASE_SETUP.md`](docs/RELEASE_SETUP.md) | release-please, Electron builds, repo settings |
+| [`PLAN.md`](PLAN.md) | Roadmap — shipped plans, verified gate by gate |
 
 ## ⌨️ Highlights
 
@@ -144,8 +198,9 @@ Details: [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md)
 
 ## 🗺️ Status
 
-- **v2.1.0** — Prism code experience: syntax highlighting (40+ languages), find & replace,
-  note templates, HTML export. See [`CHANGELOG.md`](CHANGELOG.md) and [`PLAN.md`](PLAN.md)
+- **v0.0.1** — active public development on the 0.x line: `0.0.x` fixes, `0.x.0` features,
+  `1.0.0` reserved for a stable, documented API. Policy: [`docs/VERSIONING.md`](docs/VERSIONING.md) ·
+  history: [`CHANGELOG.md`](CHANGELOG.md)
 - AGPL-3.0 — fork it, self-host it, ship it. Attribution appreciated, never stripped.
 
 ## 🤝 Contributing
