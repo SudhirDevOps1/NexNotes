@@ -3,6 +3,14 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.0.3](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.2...v0.0.3) (2026-11-04)
+
+
+### Bug Fixes
+
+* **health:** the boot gate no longer hangs on a slow database start ([a8a1f20](https://github.com/SudhirDevOps1/NexNotes/commit/a8a1f209dc770eb8f7eb1d973e8ece245ba75b2b))
+* **sync:** same-name tag/folder pushes land instead of retrying forever ([5401046](https://github.com/SudhirDevOps1/NexNotes/commit/540104687ac8dcc41198d049783569b4dfe56afd))
+
 ## [0.0.2](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.1...v0.0.2) (2026-11-04)
 
 
