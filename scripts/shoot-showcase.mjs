@@ -215,9 +215,12 @@ await shot("command-palette", async () => {
 });
 
 await shot("search", async () => {
-  await page.getByPlaceholder("Search notes…", { exact: true }).click();
-  await page.keyboard.type("markdown");
-  await page.waitForTimeout(1000);
+  await recover(); // leave any open note/overlay behind — search needs a clean shell
+  const search = page.getByPlaceholder("Search notes…", { exact: true });
+  await search.click();
+  await search.fill("math");
+  await page.waitForTimeout(1100);
+  if ((await search.inputValue()) !== "math") throw new Error("search text lost focus");
   await page.screenshot({ path: join(OUT, "search.png") });
   await recover();
 });
