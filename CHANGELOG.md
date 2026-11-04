@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.0.4](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.3...v0.0.4) (2026-11-04)
+
+
+### Bug Fixes
+
+* **vault:** never render or re-encrypt account ciphertext in the editor ([9b4f59c](https://github.com/SudhirDevOps1/NexNotes/commit/9b4f59c327f77c581b6052d6676b5fcdb46407db))
+
 ## [0.0.3](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.2...v0.0.3) (2026-11-04)
 
 
