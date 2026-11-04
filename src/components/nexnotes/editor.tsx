@@ -30,7 +30,7 @@ import { CodeBlock, mdCodeComponents } from "./code-block";
 import { NoteMenu } from "./note-menu";
 import { SheetEditor, SheetPreview, sheetToMarkdown } from "./sheet-editor";
 import { TotpPreview } from "./totp";
-import { isLockEncrypted } from "@/lib/crypto";
+import { isLockEncrypted, isEncrypted } from "@/lib/crypto";
 import { cn } from "@/lib/utils";
 
 /** v2.0 — WYSIWYG rich-text editor (mdxeditor), client-only */
@@ -186,6 +186,7 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
   const setMobilePane = useApp((s) => s.setMobilePane);
   const setHistory = useApp((s) => s.setHistory);
   const unlockNote = useApp((s) => s.unlockNote);
+  const unlockVault = useApp((s) => s.unlockVault);
   const copyNoteMarkdown = useApp((s) => s.copyNoteMarkdown);
   /* v2.0 — wiki links + backlinks */
   const selectNote = useApp((s) => s.selectNote);
@@ -195,6 +196,10 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
   const isLockedHidden = note.locked && !unlocked;
   const title = unlocked ? unlocked.title : note.title;
   const content = unlocked ? unlocked.content : note.content;
+  // v2.2 — the body is still account ciphertext (nxenc) in memory: vault locked
+  // for this session or the key failed to decrypt it. Never render raw
+  // ciphertext — gate it the same way note-password locks are gated.
+  const vaultHidden = !note.locked && !unlocked && isEncrypted(content);
   const readOnly = note.preventEdit || isLockedHidden || note.trashed;
 
   const [titleDraft, setTitleDraft] = useState(title);
@@ -589,6 +594,9 @@ function EditorBody({ note, onBack }: { note: UiNote; onBack: () => void }) {
   /* -------- locked gate -------- */
   if (isLockedHidden) {
     return <LockGate note={note} onBack={onBack} unlockNote={unlockNote} setMobilePane={setMobilePane} />;
+  }
+  if (vaultHidden) {
+    return <VaultGate onBack={onBack} unlockVault={unlockVault} setMobilePane={setMobilePane} />;
   }
 
   const bodyArea = (
@@ -1199,6 +1207,71 @@ function LockGate({
       </form>
       <p className="text-[11px] text-muted-foreground mt-4 max-w-xs text-center">
         Wrong password? The note keeps its previous version — try again or check Note history after unlocking.
+      </p>
+    </div>
+  );
+}
+
+/** v2.2 — gate for notes whose body is still account ciphertext (nxenc) in
+ *  memory: the vault is locked for this session, or the key failed to decrypt
+ *  that note. Replaces the raw-ciphertext textarea that made encrypted notes
+ *  look corrupted — and invited exactly one wrong keystroke too many. */
+function VaultGate({
+  onBack, unlockVault, setMobilePane,
+}: {
+  onBack: () => void;
+  unlockVault: (password: string) => Promise<void>;
+  setMobilePane: (p: "list" | "editor") => void;
+}) {
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pw) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await unlockVault(pw); // success decrypts every note in memory
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unlock failed");
+    } finally {
+      setBusy(false);
+      setPw("");
+    }
+  }
+
+  return (
+    <div className={cn("h-full flex flex-col items-center justify-center bg-background px-6 nx-fade")}>
+      <form onSubmit={submit} className="w-full max-w-xs rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col items-center text-center mb-5">
+          <div className="h-12 w-12 rounded-2xl nx-accent-bg flex items-center justify-center mb-3">
+            <Lock className="h-6 w-6 text-white" />
+          </div>
+          <h3 className="font-semibold">Vault locked</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            This note is end-to-end encrypted. Enter your account password to decrypt it for this session.
+          </p>
+        </div>
+        <Input
+          type="password" value={pw} onChange={(e) => setPw(e.target.value)}
+          placeholder="Account password" autoFocus autoComplete="current-password"
+        />
+        {error && <p className="text-xs text-destructive mt-2">{error}</p>}
+        <Button type="submit" className="w-full mt-3 nx-accent-bg" disabled={busy || !pw}>
+          {busy ? <RotateCcw className="h-4 w-4 animate-spin" /> : <LockOpen className="h-4 w-4" />}
+          Unlock vault
+        </Button>
+        <div className="mt-3">
+          <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground"
+            onClick={() => { onBack(); setMobilePane("list"); }}>
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </Button>
+        </div>
+      </form>
+      <p className="text-[11px] text-muted-foreground mt-4 max-w-xs text-center">
+        Nothing was lost — the note stays safely encrypted until the vault unlocks.
       </p>
     </div>
   );
