@@ -3,6 +3,24 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.0.1] — 2026-11-02 — "Honest numbers"
+
+**The version resets to `0.0.1`.** NexNotes is in active public development, and
+SemVer 0.x is the industry convention for exactly that (major version zero = rapid
+development, unstable API). The 2.x line jumped ahead of reality; everything it shipped
+is still here, now under a numbering scheme that tells the truth:
+
+- **`0.0.x`** — fixes · **`0.x.0`** — features · breaking changes bump the minor
+  (`0.0.1 → 0.1.0`) until 1.0.0
+- release-please is configured with `bump-minor-pre-major` /
+  `bump-patch-for-minor-pre-major`, so Conventional Commits keep driving the train
+- `1.0.0` is reserved for a stable, documented, supported API — see
+  [`docs/VERSIONING.md`](docs/VERSIONING.md) for the full policy and the graduation
+  checklist
+
+No code changed in this release; the version files, the manifest and this changelog
+were renumbered. Earlier entries below are kept verbatim as the pre-0.x history.
+
 ## [2.2.0] — 2026-11-02 — "Real desktop app"
 
 The desktop experience is rebuilt on Electron. Nothing about the web app changed.
