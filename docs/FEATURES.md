@@ -66,7 +66,7 @@
 | **Daily auto-backup snapshots** | ❌ | ✅ (desktop) | ✅ IndexedDB, last 7, restore-in-place |
 | Public share links (publishing) | ❌ | ✅ Listed (hosted) | ✅ self-hosted `/s/<token>`, noindex, revocable |
 | REST API | ✅ | ✅ | ✅ `/api/v1/me`, `/api/v1/notes[...]` |
-| Integrations vault (Discord/Telegram/GitHub/webhook) | ❌ | ❌ | ✅ device-local, E2E-encrypted at rest |
+| Integrations vault (Discord/Telegram/GitHub/LLM/webhook) | ❌ | ❌ | ✅ device-local, E2E-encrypted at rest — [`API-KEYS.md`](API-KEYS.md) |
 | Multi-instance (self-host) accounts | — | — | ✅ unlimited |
 
 ## 5. Appearance
