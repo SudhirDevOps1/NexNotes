@@ -116,8 +116,9 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
       workflow meanwhile attaches the raw lcov as the `coverage-report`
       artifact and prints the % table in the run summary, so nothing is lost
       in the meantime.
-- [ ] Recommended branch protection on `main`: require CI + CodeQL + E2E Gate
-      to pass before merge (Settings → Branches).
+- [ ] Recommended branch protection on `main` — the exact ruleset, the four
+      required check names and both apply-paths (UI + API) now live in
+      [`BRANCH-PROTECTION.md`](BRANCH-PROTECTION.md).
 - [ ] Optional: OWASP ZAP baseline runs nightly at 01:45 UTC (cron) — it can
       also be triggered manually from the Actions tab (workflow_dispatch).
 
