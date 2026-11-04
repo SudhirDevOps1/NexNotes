@@ -122,10 +122,10 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 - [ ] Optional: OWASP ZAP baseline runs nightly at 01:45 UTC (cron) — it can
       also be triggered manually from the Actions tab (workflow_dispatch).
 
-## 6. Cutting the first release
+## 6. Cutting a release
 
 ```bash
-git tag v0.0.2 && git push origin v0.0.2
+git tag v0.0.3 && git push origin v0.0.3
 # → Release workflow builds the Electron NSIS installer (windows) + AppImage
 #   (linux) + portable server packages, boot-tests all of them, attaches
 #   SHA256SUMS, and publishes the GitHub Release.
@@ -133,6 +133,25 @@ git tag v0.0.2 && git push origin v0.0.2
 
 After that, merge `feat:`/`fix:` commits to main and release-please proposes
 the next version automatically.
+
+**v0.0.2 postmortem — the two quirks the first machine-tagged release hit
+(2026-11-04), kept here because both bite again the moment they're forgotten:**
+
+1. *Tag prefix.* release-please defaults to `nexnotes-v<version>` for a node
+   package with a component, but `release.yml` only fires on tags matching
+   `v*`. Fixed in `release-please-config.json` (`"tag-prefix": "v"` +
+   `"include-component-in-tag": false`) — without it the first tagged release
+   would have landed as `nexnotes-v0.0.2` and silently skipped every artifact
+   job.
+2. *The release anchor.* release-please creates a release only when it can see
+   one at the manifest version's tag; with no release PR (the §5 gate), it
+   builds the *next* version's PR instead and nothing ships. v0.0.2 was cut by
+   fast-forwarding main to the generated release commit
+   (`chore(main): release nexnotes 0.0.2`), creating the release + tag with the
+   owner PAT, then re-pushing the tag with git — a real `git push` fires the
+   `v*` trigger; the tag created by the release API does not. Flipping the §5
+   toggle makes all of this automatic: PR appears → merge → next run finds the
+   anchor and tags `v0.0.3` itself.
 
 ## 7. Troubleshooting
 

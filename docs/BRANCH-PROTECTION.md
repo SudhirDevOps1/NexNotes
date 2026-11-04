@@ -64,7 +64,11 @@ the `·` separators (GitHub treats unknown names as permanently "pending"):
 ## Apply it — API (one call)
 
 Fine-grained PAT needs **Administration: read/write** (the usual push token does
-not carry it — see [`RELEASE_SETUP.md`](RELEASE_SETUP.md) §5). `rulesets` API:
+not carry it — see [`RELEASE_SETUP.md`](RELEASE_SETUP.md) §5). Status: tested
+against this repo on 2026-11-04 with the owner's fine-grained PAT — the call
+403s ("Resource not accessible by personal access token"), so that token lacks
+the permission and the **Settings UI path below is the one that works today**.
+`rulesets` API:
 
 ```bash
 curl -X POST \
