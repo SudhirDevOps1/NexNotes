@@ -43,6 +43,9 @@
     "scripts/test-sn-import.ts",
     ".zscripts",
     "download",
-    "upload"
+    "upload",
+    "src/lib/nx",
+    "src/components/nx",
+    "src/app/api/nx"
   ]
 }
