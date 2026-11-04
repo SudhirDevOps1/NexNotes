@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 640" width="2400" height="640">
+  
+  <defs>
+    <radialGradient id="glowL" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#10b981" stop-opacity="0.13"/><stop offset="1" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="44" height="44" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.5" fill="#34d399" fill-opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="2400" height="640" fill="#0b1512"/>
+  <rect width="2400" height="640" fill="url(#dots)"/>
+  <circle cx="336" cy="0" r="736" fill="url(#glowL)"/>
+  <circle cx="2064" cy="640" r="672" fill="url(#glowL)"/>
+  <g transform="translate(-130,96)" opacity="0.05">
+  <defs>
+    <linearGradient id="grad470" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="0.55" stop-color="#10b981"/><stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <radialGradient id="sheen470" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path d="M102.8125 0 H367.1875 L470 102.8125 V367.1875
+           A102.8125 102.8125 0 0 1 367.1875 470 H102.8125
+           A102.8125 102.8125 0 0 1 0 367.1875 V102.8125
+           A102.8125 102.8125 0 0 1 102.8125 0 Z" fill="url(#grad470)"/>
+  <ellipse cx="139.53125" cy="88.125" rx="279.0625" ry="176.25" fill="url(#sheen470)" opacity="0.18"/>
+  <path d="M367.1875 0 L367.1875 102.8125 L470 102.8125 Z" fill="#ffffff" opacity="0.30"/>
+  <path d="M146.875 323.125 V146.875 L323.125 323.125 V146.875"
+        fill="none" stroke="#ffffff" stroke-width="42.2265625"
+        stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(2060,96)" opacity="0.05">
+  <defs>
+    <linearGradient id="grad470" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="0.55" stop-color="#10b981"/><stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <radialGradient id="sheen470" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path d="M102.8125 0 H367.1875 L470 102.8125 V367.1875
+           A102.8125 102.8125 0 0 1 367.1875 470 H102.8125
+           A102.8125 102.8125 0 0 1 0 367.1875 V102.8125
+           A102.8125 102.8125 0 0 1 102.8125 0 Z" fill="url(#grad470)"/>
+  <ellipse cx="139.53125" cy="88.125" rx="279.0625" ry="176.25" fill="url(#sheen470)" opacity="0.18"/>
+  <path d="M367.1875 0 L367.1875 102.8125 L470 102.8125 Z" fill="#ffffff" opacity="0.30"/>
+  <path d="M146.875 323.125 V146.875 L323.125 323.125 V146.875"
+        fill="none" stroke="#ffffff" stroke-width="42.2265625"
+        stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(1126,72)">
+  <defs>
+    <linearGradient id="grad148" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="0.55" stop-color="#10b981"/><stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <radialGradient id="sheen148" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path d="M32.375 0 H115.625 L148 32.375 V115.625
+           A32.375 32.375 0 0 1 115.625 148 H32.375
+           A32.375 32.375 0 0 1 0 115.625 V32.375
+           A32.375 32.375 0 0 1 32.375 0 Z" fill="url(#grad148)"/>
+  <ellipse cx="43.9375" cy="27.75" rx="87.875" ry="55.5" fill="url(#sheen148)" opacity="0.18"/>
+  <path d="M115.625 0 L115.625 32.375 L148 32.375 Z" fill="#ffffff" opacity="0.30"/>
+  <path d="M46.25 101.75 V46.25 L101.75 101.75 V46.25"
+        fill="none" stroke="#ffffff" stroke-width="13.296875"
+        stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="1200" y="332" text-anchor="middle" font-family="Noto Sans SC" font-weight="700" font-size="112" letter-spacing="-2" fill="#ffffff">Nex<tspan fill="#34d399">Notes</tspan></text>
+  <text x="1200" y="396" text-anchor="middle" font-family="Noto Sans SC" font-weight="400" font-size="37" fill="#9fb8ae">Local-first · End-to-end encrypted · Every premium feature free</text>
+  <rect x="459" y="434" width="340" height="57" rx="28.5" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="485" y="462.5" font-family="Sarasa Mono SC" font-weight="600" font-size="30" fill="#d7e8e1" dominant-baseline="central">Markdown + Prism</text><rect x="817" y="434" width="142" height="57" rx="28.5" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="843" y="462.5" font-family="Sarasa Mono SC" font-weight="600" font-size="30" fill="#d7e8e1" dominant-baseline="central">KaTeX</text><rect x="977" y="434" width="268" height="57" rx="28.5" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="1003" y="462.5" font-family="Sarasa Mono SC" font-weight="600" font-size="30" fill="#d7e8e1" dominant-baseline="central">Spreadsheets</text><rect x="1263" y="434" width="196" height="57" rx="28.5" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="1289" y="462.5" font-family="Sarasa Mono SC" font-weight="600" font-size="30" fill="#d7e8e1" dominant-baseline="central">TOTP 2FA</text><rect x="1477" y="434" width="250" height="57" rx="28.5" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="1503" y="462.5" font-family="Sarasa Mono SC" font-weight="600" font-size="30" fill="#d7e8e1" dominant-baseline="central">PWA offline</text><rect x="1745" y="434" width="196" height="57" rx="28.5" fill="#10b9810f" stroke="#10b981" stroke-opacity="0.38" stroke-width="1.5"/><text x="1771" y="462.5" font-family="Sarasa Mono SC" font-weight="600" font-size="30" fill="#d7e8e1" dominant-baseline="central">REST API</text>
+  <text x="1200" y="578" text-anchor="middle" font-family="Sarasa Mono SC" font-weight="400" font-size="27" fill="#9fb8ae" fill-opacity="0.62">open-source · AGPL-3.0 · self-hostable · SQLite / Neon Postgres · Windows · Linux · Web</text>
+</svg>
