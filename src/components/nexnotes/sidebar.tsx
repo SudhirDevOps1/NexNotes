@@ -19,6 +19,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useApp, type View, type SmartView } from "@/lib/store";
+import { APP_VERSION } from "@/lib/version";
 import type { NoteType } from "@/lib/types";
 import { StatsDialog } from "./stats-dialog";
 import { cn } from "@/lib/utils";
@@ -133,7 +134,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <ShieldCheck className="h-5 w-5 text-white" strokeWidth={2.4} />
           </div>
           <span className="font-bold text-[15px] tracking-tight">NexNotes</span>
-          <span className="text-[10px] text-muted-foreground border rounded px-1.5 py-0.5">v2.1</span>
+          <span className="text-[10px] text-muted-foreground border rounded px-1.5 py-0.5" title={`NexNotes v${APP_VERSION}`}>v{APP_VERSION}</span>
           <Button
             variant="ghost" size="icon" className="ml-auto h-7 w-7 hidden md:inline-flex"
             onClick={toggleSidebar} aria-label="Hide sidebar"
