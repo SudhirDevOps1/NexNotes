@@ -121,42 +121,42 @@ const greeting = (name: string) => \`Hello \${name}!\`;
 ### Quote
 > "The notes you write should belong to you — no one else."`;
 
-const INSTA_PROMPTS = `# Insta prompt gem ❤️
+const INSTA_PROMPTS = `# AI prompt library
 
-High-performing Instagram AI prompts — copy-paste ready.
+High-performing AI prompts for content work — copy-paste ready.
 
-## Reel hooks
+## Writing hooks
 1. "Nobody talks about this side of \${niche}…"
 2. "I tried \${trend} for 30 days — here's what happened"
 3. "3 mistakes killing your \${goal} (fix #2 today)"
 
-## Caption generator prompt
+## Summarizer prompt
 \`\`\`text
-Act as an Instagram growth strategist.
-Write 5 caption options for a reel about [TOPIC].
-Tone: bold, Hinglish, relatable. Add 1 CTA + 8 hashtags each.
+Act as a research assistant.
+Summarize the article below in 5 bullets, then list 3 counter-points.
+Tone: neutral, factual. Keep each bullet under 20 words.
 \`\`\`
 
-## Carousel idea prompt
+## Slide outline prompt
 - Slide 1: bold claim
 - Slide 2-6: breakdown with examples
 - Slide 7: recap checklist
 - Slide 8: CTA → "Save this 🔖"`;
 
-const INSTA_LMARENS = `# INSTA LMARENS ❤️
+const INSTA_LMARENS = `# Launch checklist
 
-Learn Marxist-Leninist aesthetics notes → reel scripts. Task list:
+Everything needed to ship the next release — task list:
 
 - [x] Concept board — visual language
-- [x] Script 1: "Art as a weapon" 
-- [ ] Script 2: propaganda poster breakdown
-- [ ] Voice-over draft (Hinglish)
-- [x] Collect reference posters
-- [ ] Publish + first 3 comments seeded`;
+- [x] Landing copy — first draft
+- [ ] Changelog + release notes
+- [ ] Smoke test on Windows and Linux
+- [x] Collect review screenshots
+- [ ] Publish the announcement post`;
 
-const VICHARVERSE = `# Insta Vicharverse40 ❤️
+const VICHARVERSE = `# Content calendar
 
-Daily thought-series — 40 posts bank.
+Publishing plan — a 40-post bank.
 
 | # | Theme | Status |
 | --- | --- | --- |
@@ -166,11 +166,11 @@ Daily thought-series — 40 posts bank.
 | 04 | Reading habit | idea |
 
 **Format:** dark background, white serif text, soft piano BGM.
-**Hashtags:** #vicharverse #thoughtoftheday #mindset`;
+**Series:** #thoughtoftheday #mindset`;
 
-const APNA_PROJECT = `# apna project clone ❤️
+const APNA_PROJECT = `# NexNotes architecture
 
-Clean-room rebuild plan — like Vaultwarden is for Bitwarden.
+Clean-room build plan — like Vaultwarden is for Bitwarden.
 
 ## Stack decisions
 - Next.js 16 + TypeScript + Tailwind + shadcn/ui
@@ -214,14 +214,14 @@ const QUICK_THOUGHT = `Quick thought
 No tags on purpose — this is the demo note for the **Untagged** view.
 Tag it from the editor to see it move out of that view.`;
 
-const CONFLICT_1 = `# Insta prompt gem ❤️ (edited on phone)
+const CONFLICT_1 = `# AI prompt library (edited on phone)
 
 Offline edit made on the phone while the laptop also changed this note.
 The server kept BOTH versions — resolve from the Conflicts view.
 
 + added: "story poll prompt" section idea`;
 
-const CONFLICT_2 = `apna project clone — older laptop copy
+const CONFLICT_2 = `NexNotes architecture — older laptop copy
 
 Second demo conflict copy (5 total, like a real sync week).`;
 
@@ -340,9 +340,9 @@ docker compose up -d
 > the preview header — pick "Prisma Schema" to see this grammar light up.
 `;
 
-const V2_TOUR = `# Welcome to NexNotes 2.0 — every premium tool, free 🎉
+const V2_TOUR = `# Feature tour — every premium tool, free 🎉
 
-This release completes the "all paid features, free" promise. Try everything:
+Everything below ships in the box, no upgrade wall. Try each one:
 
 ## Wiki links — connect your notes
 Type \`[[\` in any note to link another note. Example: see [[Feature guide]].
@@ -378,22 +378,22 @@ const NOTES: NoteSeed[] = [
   { id: "demo-note-2", title: "Feature guide", content: GUIDE, tags: ["getting-started"], ageDays: 12 },
   { id: "demo-note-3", title: "How E2E encryption works", content: ENCRYPTION, folderId: "demo-folder-personal", tags: ["ideas"], ageDays: 11 },
   { id: "demo-note-4", title: "Markdown playground", content: MD, folderId: "demo-folder-work", tags: ["markdown"], ageDays: 10 },
-  { id: "demo-note-5", title: "insta prompt gem ❤️", content: INSTA_PROMPTS, starred: true, pinned: true, tags: ["instagram", "ideas"], ageDays: 6 },
-  { id: "demo-note-6", title: "INSTA LMARENS ❤️", content: INSTA_LMARENS, starred: true, noteType: "task", tags: ["instagram"], ageDays: 5 },
-  { id: "demo-note-7", title: "Insta Vicharverse40 ❤️", content: VICHARVERSE, starred: true, tags: ["instagram"], ageDays: 4 },
-  { id: "demo-note-8", title: "apna project clone ❤️", content: APNA_PROJECT, pinned: true, noteType: "code", tags: ["projects"], ageDays: 3 },
+  { id: "demo-note-5", title: "AI prompt library", content: INSTA_PROMPTS, starred: true, pinned: true, tags: ["ideas"], ageDays: 6 },
+  { id: "demo-note-6", title: "Launch checklist", content: INSTA_LMARENS, starred: true, noteType: "task", tags: ["projects"], ageDays: 5 },
+  { id: "demo-note-7", title: "Content calendar", content: VICHARVERSE, starred: true, tags: ["ideas"], ageDays: 4 },
+  { id: "demo-note-8", title: "NexNotes architecture", content: APNA_PROJECT, pinned: true, noteType: "code", tags: ["projects"], ageDays: 3 },
   {
     id: "demo-note-9", title: "Secret — bank & passwords 🔒", content: "",
     locked: true, tags: [], ageDays: 2,
   },
   { id: "demo-note-10", title: "Book ideas", content: BOOK_IDEAS, archived: true, tags: ["ideas"], ageDays: 9 },
   { id: "demo-note-11", title: "Old draft — remove later", content: OLD_DRAFT, trashed: true, ageDays: 8 },
-  { id: "demo-note-12", title: "insta prompt gem ❤️ (phone edit)", content: CONFLICT_1, conflictOf: "demo-note-5", ageDays: 1 },
+  { id: "demo-note-12", title: "AI prompt library (phone edit)", content: CONFLICT_1, conflictOf: "demo-note-5", ageDays: 1 },
   { id: "demo-note-17", title: "Quick thought (untagged)", content: QUICK_THOUGHT, ageDays: 0 },
   { id: "demo-note-18", title: "Budget — monthly sheet", content: DEMO_SHEET, noteType: "spreadsheet", tags: ["projects"], ageDays: 1 },
   { id: "demo-note-19", title: "2FA codes (demo)", content: DEMO_AUTH, noteType: "authenticator", tags: ["getting-started"], ageDays: 1 },
   { id: "demo-note-20", title: "HTML demo — booking card", content: DEMO_HTML, noteType: "html", tags: ["markdown"], ageDays: 0 },
-  { id: "demo-note-21", title: "Welcome to NexNotes 2.0", content: V2_TOUR, pinned: true, tags: ["getting-started"], ageDays: 0 },
+  { id: "demo-note-21", title: "Feature tour — wiki, math & more", content: V2_TOUR, pinned: true, tags: ["getting-started"], ageDays: 0 },
   { id: "demo-note-22", title: "Code demo — Prism highlighting ✨", content: V21_CODE_TOUR, tags: ["getting-started"], ageDays: 0 },
 ];
 
@@ -513,7 +513,7 @@ export async function seedNewUserStarters(userId: string) {
     { key: "offline", title: "Works offline, syncs everywhere", content: STARTER_OFFLINE, pinned: false, starred: false },
     { key: "auth", title: "2FA codes (demo)", content: STARTER_AUTH, noteType: "authenticator" as const, pinned: false, starred: false },
     { key: "html", title: "HTML demo", content: STARTER_HTML, noteType: "html" as const, pinned: false, starred: false },
-    { key: "v2tour", title: "Welcome to NexNotes 2.0", content: V2_TOUR, pinned: true, starred: false },
+    { key: "v2tour", title: "Feature tour — wiki, math & more", content: V2_TOUR, pinned: true, starred: false },
   ];
   for (const s of starters) {
     const id = `nx-starter-${userId}-${s.key}`; // per-user id — note.id is a global PK
@@ -565,7 +565,7 @@ export async function ensureDemoUser() {
     { id: "demo-tag-start", name: "getting-started" },
     { id: "demo-tag-ideas", name: "ideas" },
     { id: "demo-tag-md", name: "markdown" },
-    { id: "demo-tag-insta", name: "instagram" },
+    { id: "demo-tag-insta", name: "media" },
     { id: "demo-tag-projects", name: "projects" },
     { id: "demo-tag-work", name: "work" },
   ]) {
@@ -596,15 +596,15 @@ export async function ensureDemoUser() {
       data: [
         {
           userId: user.id, noteId: "demo-note-5",
-          title: "insta prompt gem ❤️",
-          content: INSTA_PROMPTS.replace("## Carousel idea prompt", "## Story poll prompt\n- \"This or that\" template\n\n## Carousel idea prompt"),
+          title: "AI prompt library",
+          content: INSTA_PROMPTS.replace("## Slide outline prompt", "## Story poll prompt\n- \"This or that\" template\n\n## Slide outline prompt"),
           isEncrypted: false,
           createdAt: daysAgo(6, 120),
         },
         {
           userId: user.id, noteId: "demo-note-5",
-          title: "insta prompt gem",
-          content: INSTA_PROMPTS.split("## Caption generator prompt")[0] + "*(draft — more prompts coming)*",
+          title: "AI prompt library",
+          content: INSTA_PROMPTS.split("## Summarizer prompt")[0] + "*(draft — more prompts coming)*",
           isEncrypted: false,
           createdAt: daysAgo(6, 300),
         },
