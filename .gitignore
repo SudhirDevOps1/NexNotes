@@ -55,3 +55,18 @@ tests/**/node_modules
 test-results/
 playwright-report/
 coverage/
+
+# legacy local experiments — never tracked (the shipped app is src/**/nexnotes
+# + src/app/**; the nx/ tree is the pre-rewrite scaffold kept for reference)
+/public/nex/
+/public/nxicons/
+/src/lib/nx/
+/src/components/nx/
+/src/app/api/nx/
+/scripts/nx_icons.py
+/scripts/nexnotes_icons.py
+/scripts/nexnotes_postbuild.py
+/scripts/probe-icons.mjs
+/scripts/build-appimage.sh
+/scripts/installer.nsi
+/tests/*.sh
