@@ -1,8 +1,14 @@
-# NexNotes v2.0 — "All Premium Tools Free" — Implementation Plan (plan-first, execute-after)
+# NexNotes — engineering plan log
 
-**Date:** 2026-11-01 · **App:** clean-room NexNotes (Next.js 16 + React 19 + Tailwind 4 + Prisma: SQLite default, Neon/Postgres switchable)
+**App:** clean-room NexNotes (Next.js 16 + React 19 + Tailwind 4 + Prisma: SQLite default, Neon/Postgres switchable)
 **Rule:** ADDITIVE ONLY — nothing existing is removed. Everything privacy-first & local-first.
 **Target repo:** `https://github.com/SudhirDevOps1/NexNotes.git` (clean conventional commits, full docs, GitHub Actions, Docker)
+
+> **Versioning note (2026-11-02):** the entries below were written under the old
+> `v2.x` numbering. The project has since reset to **major-version zero** —
+> `0.0.1` — and follows the 0.x policy in [`docs/VERSIONING.md`](docs/VERSIONING.md):
+> `0.0.x` fixes, `0.x.0` features, `1.0.0` reserved for a stable API. The plans
+> themselves are unchanged history; only the numbers they shipped under moved.
 
 ---
 
