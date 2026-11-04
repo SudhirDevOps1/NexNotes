@@ -143,5 +143,5 @@ the next version automatically.
 | Windows smoke job fails | Check `prisma/schema.prisma` still lists `binaryTargets = ["native", "windows"]`; the boot test reads the port from `%APPDATA%\NexNotes\server.json` |
 | AppImage builds but the app logs `Cannot find module 'next'` | electron-builder ignores a ROOT-level `node_modules` dir in extraResources (`app-builder-lib` `out/util/filter.js`) — keep the server staged under `build/desktop-payload/server/` (the wrapper dir defeats the check) |
 | Codecov badge shows "unknown" | Set `CODECOV_TOKEN` (see §5) — tokenless uploads are gone |
-| AppImage fails on old distros | Built on ubuntu-22.04 for glibc ≥ 2.35; rebuild on an older runner image if needed |
+| AppImage fails on old distros | Built on ubuntu-24.04 (glibc ≥ 2.39) since the ubuntu-22.04 runner entered deprecation brownouts — if a user's distro is older than that, ship a portable tar.gz instead (bundled node, no glibc floor beyond Electron's) |
 | Artifacts uploaded twice | `gh release upload --clobber` is intentional — re-runs replace assets |
