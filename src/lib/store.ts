@@ -143,8 +143,9 @@ interface AppActions {
   toggleSidebar: () => void;
   /** collapse / expand the desktop note-list pane (v1.4, Alt+L) */
   toggleList: () => void;
-  enableEncryption: (password: string) => Promise<void>;
-  disableEncryption: (password: string) => Promise<void>;
+  /** resolves how many notes stay locked (undecryptable with the vault key) */
+  enableEncryption: (password: string) => Promise<{ lockedNotes: number }>;
+  disableEncryption: (password: string) => Promise<{ lockedNotes: number }>;
   unlockVault: (password: string) => Promise<void>;
   exportJson: () => Promise<void>;
   exportMarkdown: () => Promise<void>;
@@ -252,6 +253,37 @@ async function encryptRowsForIdb(
 
 function parse(json: unknown): unknown {
   return json;
+}
+
+/** Result of the vault enable/disable flows — how many notes carry ciphertext
+ *  that this vault key cannot open (e.g. rows encrypted by an older/lost key).
+ *  They are never touched — the editor shows the vault gate for them. */
+export interface VaultResult { lockedNotes: number }
+
+/** Verify a typed password against the ACCOUNT password (server bcrypt check).
+ *
+ *  The vault key is derived client-side from the account password — the server
+ *  never sees the key — but before the client encrypts data with that key it
+ *  must know the password is the real one. Resolves true/false for a
+ *  definitive server answer; rejects only when the server cannot be reached
+ *  (offline / 5xx) so callers can fall back to local verification.
+ *  (v2.3 bugfix — used to be nothing: any typo encrypted the whole vault with
+ *  a key nobody knew, and a fresh device accepted any password at unlock.) */
+async function verifyAccountPassword(password: string): Promise<boolean> {
+  let r: Response;
+  try {
+    r = await fetch("/api/user/verify-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+  } catch {
+    throw new Error("server unreachable");
+  }
+  if (r.status === 401 || r.status === 403) return false; // definitive: wrong password
+  if (!r.ok) throw new Error("server unreachable");
+  const { ok } = await r.json();
+  return Boolean(ok);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1215,6 +1247,7 @@ export const useApp = create<AppStore>((set, get) => ({
       const notes = { ...get().notes };
       for (const n of Object.values(notes)) {
         if (isLockEncrypted(n.content)) continue; // per-note layer is independent
+        if (isEncrypted(n.content)) continue; // stray ciphertext — re-keying would double-encrypt it (v2.3)
         notes[n.id] = await persistNote(get(), { ...n, dirty: true });
       }
       set({ notes });
@@ -1345,6 +1378,24 @@ export const useApp = create<AppStore>((set, get) => ({
   async enableEncryption(password) {
     const state = get();
     if (!state.user) throw new Error("Not signed in");
+    // The key comes from the typed password, so it MUST be the real account
+    // password — the server confirms it before we encrypt a single note.
+    // (v2.3 bugfix: a typo here used to encrypt the vault with a key nobody
+    // knew — unrecoverable after the next reload.)
+    let verified = false;
+    let reachable = true;
+    try {
+      verified = await verifyAccountPassword(password);
+    } catch {
+      reachable = false;
+    }
+    if (!verified) {
+      throw new Error(
+        reachable
+          ? "Wrong account password — the encryption key is derived from your login password"
+          : "You're offline — connect once to enable end-to-end encryption"
+      );
+    }
     const key = await deriveKey(state.user.email, password);
     // verify round-trip before committing
     const probe = "nexnotes-probe";
@@ -1367,27 +1418,47 @@ export const useApp = create<AppStore>((set, get) => ({
     // re-encrypt every note in IndexedDB — the in-memory store stays plaintext
     // (v2.2 bugfix: swapping the encrypted rows into memory is what made every
     // note render as raw nxenc ciphertext right after enabling encryption)
+    // (v2.3 bugfix: rows already carrying nxenc ciphertext are undecryptable
+    // strays — encrypting them AGAIN wrapped ciphertext in ciphertext for good,
+    // so they are skipped and reported as locked instead)
     const notes = { ...get().notes };
+    let lockedNotes = 0;
     for (const n of Object.values(notes)) {
       if (isLockEncrypted(n.content)) continue; // already double-protected
+      if (isEncrypted(n.content)) { lockedNotes++; continue; } // stray ciphertext — leave it
       const persisted = await persistNote(get(), { ...n, dirty: true });
       notes[n.id] = { ...persisted, content: n.content };
     }
     set({ notes });
     schedulePush(get(), 0);
+    return { lockedNotes };
   },
 
   async disableEncryption(password) {
     const state = get();
     if (!state.user) throw new Error("Not signed in");
-    // verify the password can decrypt existing data before disabling
-    const anyEnc = Object.values(state.notes).find((n) => n.isEncrypted || (isEncrypted(n.content) && !isLockEncrypted(n.content)));
-    if (anyEnc) {
-      const key = await deriveKey(state.user.email, password);
-      try {
-        await decryptText(key, anyEnc.content);
-      } catch {
-        throw new Error("Wrong password — cannot decrypt your notes");
+    // Verify against the ACCOUNT password (server bcrypt). The old probe —
+    // "decrypt the first encrypted note" — deadlocked accounts holding a note
+    // encrypted with an older/lost key: even the CORRECT password could never
+    // turn E2E off, because one stray note always failed to decrypt.
+    // (v2.3 bugfix) Offline fallback: probe a local note as before.
+    let verified = false;
+    let reachable = true;
+    try {
+      verified = await verifyAccountPassword(password);
+    } catch {
+      reachable = false;
+    }
+    if (!verified && reachable) throw new Error("Wrong password");
+    if (!verified && !reachable) {
+      const anyEnc = Object.values(state.notes).find((n) => n.isEncrypted || (isEncrypted(n.content) && !isLockEncrypted(n.content)));
+      if (anyEnc) {
+        const key = await deriveKey(state.user.email, password);
+        try {
+          await decryptText(key, anyEnc.content);
+        } catch {
+          throw new Error("You're offline — connect once to disable encryption");
+        }
       }
     }
     const r = await fetch("/api/user/settings", {
@@ -1402,39 +1473,62 @@ export const useApp = create<AppStore>((set, get) => ({
     await idbSetMeta("lastUser", user);
 
     const notes = { ...get().notes };
+    let lockedNotes = 0;
     for (const n of Object.values(notes)) {
       if (isLockEncrypted(n.content)) continue; // keep note-lock layer intact
+      if (isEncrypted(n.content)) { lockedNotes++; continue; } // stray ciphertext — stays gated
       const persisted = await persistNote(get(), { ...n, isEncrypted: false, dirty: true });
       notes[n.id] = { ...persisted, content: n.content }; // memory stays plaintext
     }
     set({ notes });
     schedulePush(get(), 0);
+    return { lockedNotes };
   },
 
   async unlockVault(password) {
     const state = get();
     if (!state.user) throw new Error("Not signed in");
     const key = await deriveKey(state.user.email, password);
-    // Verify the password against the data: at least ONE note must decrypt.
-    // (v2.2 bugfix — the probe used to be one arbitrary encrypted note, so a
-    // single stray note encrypted with a different/lost key could lock the
-    // correct password out forever. PBKDF2 dominates the cost of the extra
-    // AES-GCM attempts, so trying notes in order is still fail-fast in practice.)
-    const encNotes = Object.values(state.notes).filter(
-      (n) => isEncrypted(n.content) && !isLockEncrypted(n.content)
-    );
-    if (encNotes.length) {
-      let verified = false;
-      for (const n of encNotes) {
-        try {
-          await decryptText(key, n.content);
-          verified = true;
-          break;
-        } catch {
-          /* try the next note */
+    // Verify the password BEFORE trusting it. Online the server is the
+    // authority (bcrypt against the account password) — the old note-probe let
+    // ANY password unlock a fresh device, because an empty IndexedDB meant
+    // zero notes to probe and zero verification; the vault then re-synced and
+    // re-encrypted every note with a key nobody knew. (v2.3 bugfix)
+    // Offline fallback: probe local ciphertext, at least ONE note must
+    // decrypt. A single stray note can never lock the correct password out —
+    // notes are tried in order, and PBKDF2 dominates the cost.
+    let verified = false;
+    let reachable = true;
+    try {
+      verified = await verifyAccountPassword(password);
+    } catch {
+      reachable = false; // offline — fall back to the local probe
+    }
+    if (!verified) {
+      const encNotes = Object.values(state.notes).filter(
+        (n) => isEncrypted(n.content) && !isLockEncrypted(n.content)
+      );
+      if (encNotes.length) {
+        // Legacy escape hatch: a vault enabled before the server-verify fix
+        // may use an enable-time password that differs from the account
+        // password. If the typed password decrypts the local data it still
+        // gets in — that ciphertext never left this device anyway.
+        let probed = false;
+        for (const n of encNotes) {
+          try {
+            await decryptText(key, n.content);
+            probed = true;
+            break;
+          } catch {
+            /* try the next note */
+          }
         }
+        if (!probed) throw new Error("Wrong password");
+      } else if (!reachable) {
+        throw new Error("You're offline — connect once so the vault can verify your password");
+      } else {
+        throw new Error("Wrong password");
       }
-      if (!verified) throw new Error("Wrong password");
     }
     cacheKey(state.user.id, key);
     await serializeKey(state.user.id, key);
