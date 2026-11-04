@@ -8,3 +8,8 @@
 6d330703d7bd11f43da5acc4b5a49a269dc7bf78:src/components/nexnotes/api-integrations.tsx:curl-auth-header:165
 6d330703d7bd11f43da5acc4b5a49a269dc7bf78:src/components/nexnotes/api-integrations.tsx:curl-auth-header:168
 6d330703d7bd11f43da5acc4b5a49a269dc7bf78:src/components/nexnotes/api-integrations.tsx:curl-auth-header:171
+
+# tests/unit/totp.test.ts carries the official RFC 4226 Appendix D test
+# secret ("12345678901234567890", base32) — the vector every TOTP library
+# validates against. Public spec data, not a credential.
+0b63f65c47995c40788ee02382d0d34d32ead507:tests/unit/totp.test.ts:generic-api-key:20
