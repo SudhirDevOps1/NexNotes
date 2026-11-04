@@ -44,8 +44,9 @@ free tier for public repositories — no paid services, no external runners.
 ## Cutting a release
 
 ```bash
-git tag v2.1.1
-git push origin v2.1.1
+git tag v0.0.2 && git push origin v0.0.2
 ```
 
-Release + Docker workflows pick the tag up automatically.
+Release + Docker workflows pick the tag up automatically. Day-to-day you don't
+cut tags by hand — merged `feat:`/`fix:` commits make release-please open the
+release PR for you (see [`VERSIONING.md`](VERSIONING.md)).

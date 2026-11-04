@@ -124,7 +124,7 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 ## 6. Cutting the first release
 
 ```bash
-git tag v2.2.0 && git push origin v2.2.0
+git tag v0.0.2 && git push origin v0.0.2
 # → Release workflow builds the Electron NSIS installer (windows) + AppImage
 #   (linux) + portable server packages, boot-tests all of them, attaches
 #   SHA256SUMS, and publishes the GitHub Release.
