@@ -11,7 +11,7 @@
   [![CodeQL](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/codeql.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/codeql.yml)
   [![codecov](https://codecov.io/gh/SudhirDevOps1/NexNotes/graph/badge.svg)](https://codecov.io/gh/SudhirDevOps1/NexNotes)
   [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/SudhirDevOps1/NexNotes/badge)](https://scorecard.dev/viewer/?uri=github.com/SudhirDevOps1/NexNotes)
-  [![Release](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/release.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/release.yml)
+  [![Latest release](https://img.shields.io/github/v/release/SudhirDevOps1/NexNotes?label=release&color=10b981)](https://github.com/SudhirDevOps1/NexNotes/releases/latest)
   [![Docker](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml/badge.svg)](https://github.com/SudhirDevOps1/NexNotes/actions/workflows/docker.yml)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
   [![Status: 0.x — in development](https://img.shields.io/badge/status-0.x%20in%20development-orange)](docs/VERSIONING.md)
