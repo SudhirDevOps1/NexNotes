@@ -154,7 +154,11 @@ export async function restoreKey(userId: string): Promise<CryptoKey | null> {
 
 export function clearStoredKey(userId: string) {
   keyCache.delete(userId);
-  sessionStorage.removeItem(`nx_key_${userId}`);
+  try {
+    sessionStorage.removeItem(`nx_key_${userId}`);
+  } catch {
+    /* no sessionStorage (tests / exotic embeds) — nothing to clear */
+  }
 }
 
 /* ---- per-note unlock session cache ---- */

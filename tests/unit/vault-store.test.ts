@@ -104,6 +104,10 @@ describe("E2E vault store contract", () => {
     globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
       const u = String(url);
       if (u === "/api/auth/me") return okJson({ user: { ...USER, encryptionEnabled } });
+      if (u === "/api/user/verify-password") {
+        const { password } = JSON.parse(String(init?.body));
+        return password === PW ? okJson({ ok: true }) : new Response(JSON.stringify({ ok: false }), { status: 401 });
+      }
       if (u === "/api/user/settings" && init?.method === "PATCH") {
         encryptionEnabled = true;
         return okJson({ user: { ...USER, encryptionEnabled } });
@@ -147,6 +151,10 @@ describe("E2E vault store contract", () => {
     globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
       const u = String(url);
       if (u === "/api/auth/me") return okJson({ user: { ...USER, encryptionEnabled } });
+      if (u === "/api/user/verify-password") {
+        const { password } = JSON.parse(String(init?.body));
+        return password === PW ? okJson({ ok: true }) : new Response(JSON.stringify({ ok: false }), { status: 401 });
+      }
       if (u === "/api/user/settings" && init?.method === "PATCH") {
         encryptionEnabled = true;
         return okJson({ user: { ...USER, encryptionEnabled } });
@@ -259,6 +267,10 @@ describe("E2E vault store contract", () => {
     globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
       const u = String(url);
       if (u === "/api/auth/me") return okJson({ user: { ...USER, encryptionEnabled } });
+      if (u === "/api/user/verify-password") {
+        const { password } = JSON.parse(String(init?.body));
+        return password === PW ? okJson({ ok: true }) : new Response(JSON.stringify({ ok: false }), { status: 401 });
+      }
       if (u === "/api/user/settings" && init?.method === "PATCH") {
         encryptionEnabled = Boolean(JSON.parse(String(init?.body)).encryptionEnabled);
         return okJson({ user: { ...USER, encryptionEnabled } });
@@ -326,5 +338,166 @@ describe("E2E vault store contract", () => {
     expect(useApp.getState().notes.n1.content).toBe("version one text");
     expect(useApp.getState().notes.n1.title).toBe("old title");
     void decryptText;
+  });
+
+  it("unlockVault on a fresh device (empty IndexedDB) rejects ANY wrong password online", async () => {
+    // v2.3 bugfix — the demo-account lockout: a fresh browser has no notes in
+    // memory, the old note-probe had nothing to verify against, so ANY
+    // password unlocked the vault and the subsequent sync re-encrypted every
+    // server note with a key nobody knew.
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u === "/api/auth/me") return okJson({ user: { ...USER, encryptionEnabled: true } });
+      if (u === "/api/user/verify-password") {
+        const { password } = JSON.parse(String(init?.body));
+        return password === PW ? okJson({ ok: true }) : new Response(JSON.stringify({ ok: false }), { status: 401 });
+      }
+      if (u === "/api/sync") {
+        return okJson({ serverTime: new Date().toISOString(), notes: [], folders: [], tags: [], deletions: [], applied: 0, conflictsCreated: 0 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const { useApp } = await import("@/lib/store");
+    await useApp.getState().boot();
+    expect(useApp.getState().status).toBe("locked"); // fresh device + E2E account
+    expect(Object.keys(useApp.getState().notes)).toHaveLength(0); // nothing to probe
+
+    await expect(useApp.getState().unlockVault("whatever-i-typed")).rejects.toThrow("Wrong password");
+    expect(useApp.getState().status).toBe("locked");
+
+    // the real account password still unlocks
+    await useApp.getState().unlockVault(PW);
+    expect(useApp.getState().status).toBe("ready");
+  });
+
+  it("enableEncryption refuses a password the server rejects — nothing gets encrypted", async () => {
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u === "/api/auth/me") return okJson({ user: { ...USER, encryptionEnabled: false } });
+      if (u === "/api/user/verify-password") {
+        const { password } = JSON.parse(String(init?.body));
+        return password === PW ? okJson({ ok: true }) : new Response(JSON.stringify({ ok: false }), { status: 401 });
+      }
+      if (u === "/api/user/settings" && init?.method === "PATCH") {
+        throw new Error("PATCH must never be reached with a rejected password");
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const { useApp } = await import("@/lib/store");
+    await useApp.getState().boot();
+    const id = await useApp.getState().createNote();
+    await useApp.getState().updateNote(id, { content: "still plaintext" });
+
+    await expect(useApp.getState().enableEncryption("typo-password")).rejects.toThrow("Wrong account password");
+    expect(useApp.getState().user!.encryptionEnabled).toBe(false);
+    expect(useApp.getState().encKey).toBe(null);
+    expect(useApp.getState().notes[id].content).toBe("still plaintext");
+    const row = idb.notes.get(id)!;
+    expect(String(row.content)).not.toMatch(/^nxenc:/); // nothing was encrypted
+  });
+
+  it("enableEncryption never double-encrypts stray ciphertext — skips it and reports locked notes", async () => {
+    const alienCipher = await encryptText(await deriveKey("lost@device.dev", "old-pw"), "orphan");
+
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u === "/api/auth/me") return okJson({ user: { ...USER, encryptionEnabled: false } });
+      if (u === "/api/user/verify-password") {
+        const { password } = JSON.parse(String(init?.body));
+        return password === PW ? okJson({ ok: true }) : new Response(JSON.stringify({ ok: false }), { status: 401 });
+      }
+      if (u === "/api/user/settings" && init?.method === "PATCH") {
+        return okJson({ user: { ...USER, encryptionEnabled: true } });
+      }
+      if (u === "/api/sync") {
+        return okJson({ serverTime: new Date().toISOString(), notes: [], folders: [], tags: [], deletions: [], applied: 0, conflictsCreated: 0 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const { useApp } = await import("@/lib/store");
+    await useApp.getState().boot();
+    const id = await useApp.getState().createNote();
+    await useApp.getState().updateNote(id, { content: "normal note" });
+    // the stray ciphertext exists in memory (as decryptVaultInMemory leaves it)
+    // AND in IndexedDB (as a previous session persisted it)
+    idb.notes.set("orphan", { id: "orphan", content: alienCipher, isEncrypted: true });
+    useApp.setState({
+      notes: {
+        ...useApp.getState().notes,
+        orphan: { ...useApp.getState().notes[id], id: "orphan", content: alienCipher },
+      },
+    });
+
+    const { lockedNotes } = await useApp.getState().enableEncryption(PW);
+    expect(lockedNotes).toBe(1);
+
+    // the orphan keeps its ORIGINAL ciphertext — not a second nxenc wrapper
+    expect(useApp.getState().notes.orphan.content).toBe(alienCipher);
+    const row = idb.notes.get("orphan")!;
+    expect(row.content).toBe(alienCipher);
+    const occurrences = String(row.content).split("nxenc:v1:").length - 1;
+    expect(occurrences).toBe(1); // double encryption used to make this 2
+
+    // the healthy note IS encrypted
+    const goodRow = idb.notes.get(id)!;
+    expect(String(goodRow.content)).toMatch(/^nxenc:v1:/);
+  });
+
+  it("disableEncryption works with the correct account password even when a stray note cannot decrypt", async () => {
+    // v2.3 bugfix — the deadlock: the old disable probe required decrypting
+    // the FIRST encrypted note, so one stray note encrypted with a lost key
+    // made it impossible to ever turn E2E off ("Wrong password — cannot
+    // decrypt your notes" with the CORRECT password).
+    const key = await deriveKey(USER.email, PW);
+    const alienCipher = await encryptText(await deriveKey("lost@device.dev", "old-pw"), "orphan");
+
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u === "/api/auth/me") return okJson({ user: { ...USER, encryptionEnabled: true } });
+      if (u === "/api/user/verify-password") {
+        const { password } = JSON.parse(String(init?.body));
+        return password === PW ? okJson({ ok: true }) : new Response(JSON.stringify({ ok: false }), { status: 401 });
+      }
+      if (u === "/api/user/settings" && init?.method === "PATCH") {
+        return okJson({ user: { ...USER, encryptionEnabled: false } });
+      }
+      if (u === "/api/sync") {
+        return okJson({ serverTime: new Date().toISOString(), notes: [], folders: [], tags: [], deletions: [], applied: 0, conflictsCreated: 0 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const { useApp } = await import("@/lib/store");
+
+    useApp.setState({
+      user: { ...USER, encryptionEnabled: true },
+      encKey: key,
+      notes: {
+        good: {
+          id: "good", title: "t", content: "readable note", isEncrypted: true, folderId: null,
+          tagIds: [], starred: false, noteType: "markdown", preventEdit: false,
+          editorWidth: "narrow", locked: false, lockHash: null, conflictOf: null,
+          pinned: false, archived: false, trashed: false, trashedAt: null,
+          createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", dirty: false,
+        },
+        stray: {
+          id: "stray", title: "lost", content: alienCipher, isEncrypted: true, folderId: null,
+          tagIds: [], starred: false, noteType: "markdown", preventEdit: false,
+          editorWidth: "narrow", locked: false, lockHash: null, conflictOf: null,
+          pinned: false, archived: false, trashed: false, trashedAt: null,
+          createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", dirty: false,
+        },
+      },
+    });
+
+    const { lockedNotes } = await useApp.getState().disableEncryption(PW);
+    expect(lockedNotes).toBe(1); // the stray stays locked — but disable WORKS
+    expect(useApp.getState().encKey).toBe(null);
+    expect(useApp.getState().user!.encryptionEnabled).toBe(false);
+    expect(useApp.getState().notes.good.content).toBe("readable note");
+    expect(useApp.getState().notes.stray.content).toBe(alienCipher); // untouched
   });
 });

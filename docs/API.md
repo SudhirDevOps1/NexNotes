@@ -71,6 +71,7 @@ Move to trash. Add `?hard=1` to purge permanently.
 | GET/POST | `/api/files`, GET/DELETE `/api/files/:id` | attachment library (base64 or E2E ciphertext) |
 | GET | `/api/history/:noteId` | version snapshots |
 | GET/POST/DELETE | `/api/tokens` | personal API tokens |
+| POST | `/api/user/verify-password` | `{password}` → `{ok}` — bcrypt check the E2E vault flows call before deriving a key (enable / unlock / disable) |
 | GET | `/api/health` | `{ok, driver, counts, version}` |
 | POST | `/api/notes/:id/share` | `{enabled}` → `{path:"/s/<token>"}` (public read-only page) |
 

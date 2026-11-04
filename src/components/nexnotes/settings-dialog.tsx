@@ -225,13 +225,21 @@ export function SettingsDialog() {
     setPwBusy(true);
     try {
       if (pwMode === "enable") {
-        await enableEncryption(pw);
+        const { lockedNotes } = await enableEncryption(pw);
         toast.success("End-to-end encryption enabled", {
-          description: "All notes are now encrypted in your browser before sync.",
+          description:
+            lockedNotes > 0
+              ? `${lockedNotes} note${lockedNotes === 1 ? " was" : "s were"} already unreadable with this password and remain locked.`
+              : "All notes are now encrypted in your browser before sync.",
         });
       } else {
-        await disableEncryption(pw);
-        toast.success("Encryption disabled");
+        const { lockedNotes } = await disableEncryption(pw);
+        toast.success("Encryption disabled", {
+          description:
+            lockedNotes > 0
+              ? `${lockedNotes} note${lockedNotes === 1 ? " that" : "s that"} couldn't be decrypted earlier remain${lockedNotes === 1 ? "s" : ""} locked.`
+              : undefined,
+        });
       }
       setPwMode("off");
     } catch (err) {
