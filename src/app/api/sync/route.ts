@@ -27,6 +27,39 @@ function parseDate(v: unknown): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * Folders and tags carry unique(userId, name). The rename guard below covers
+ * the sequential case, but two devices pushing the same name on different ids
+ * inside one batch — or the suffixed name itself already taken — still reach
+ * P2002. Failing the change is the worst answer: the client keeps it queued
+ * and retries the same batch forever (that is the "Invalid prisma.tag.create()
+ * invocation" spam seen in desktop server logs). Retry instead with a longer
+ * suffix so the row lands under a free name; a third failure is genuinely
+ * abnormal and goes back to the per-change catch.
+ */
+async function upsertNamed(
+  model: "folder" | "tag",
+  id: string,
+  data: { userId: string; name: string; createdAt: Date; updatedAt: Date }
+): Promise<void> {
+  const cap = model === "folder" ? 100 : 60;
+  let name = data.name;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      if (model === "folder") {
+        await db.folder.upsert({ where: { id }, create: { id, ...data, name }, update: { ...data, name } });
+      } else {
+        await db.tag.upsert({ where: { id }, create: { id, ...data, name }, update: { ...data, name } });
+      }
+      return;
+    } catch (e) {
+      if ((e as { code?: string })?.code !== "P2002" || attempt >= 2) throw e;
+      const suffix = `${id.slice(0, 4)}${attempt ? `-${Date.now().toString(36)}` : ""}`;
+      name = `${name.slice(0, cap - suffix.length - 1)}-${suffix}`;
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
@@ -183,7 +216,7 @@ export async function POST(req: NextRequest) {
           if (existing.updatedAt.getTime() > updatedAt.getTime() + 499) continue;
         }
         const data = { userId: user.id, name: String(d.name).slice(0, 100), createdAt, updatedAt };
-        await db.folder.upsert({ where: { id: d.id }, create: { id: d.id, ...data }, update: data });
+        await upsertNamed("folder", d.id, data);
         applied++;
       } else if (ch.type === "tag") {
         if (ch.op === "delete") {
@@ -205,9 +238,8 @@ export async function POST(req: NextRequest) {
         // respect unique(userId,name): if another tag already owns the name, rename ours slightly
         let name = String(d.name).slice(0, 60).trim() || "tag";
         const nameOwner = await db.tag.findFirst({ where: { userId: user.id, name } });
-        if (nameOwner && nameOwner.id !== d.id) name = `${name}-${d.id.slice(0, 4)}`;
-        const data = { userId: user.id, name, createdAt, updatedAt };
-        await db.tag.upsert({ where: { id: d.id }, create: { id: d.id, ...data }, update: data });
+        if (nameOwner && nameOwner.id !== d.id) name = `${name}-${d.id.slice(0, 4)}`.slice(0, 60);
+        await upsertNamed("tag", d.id, { userId: user.id, name, createdAt, updatedAt });
         applied++;
       }
     } catch (e) {
