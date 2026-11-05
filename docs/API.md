@@ -71,7 +71,8 @@ Move to trash. Add `?hard=1` to purge permanently.
 | GET/POST | `/api/files`, GET/DELETE `/api/files/:id` | attachment library (base64 or E2E ciphertext) |
 | GET | `/api/history/:noteId` | version snapshots |
 | GET/POST/DELETE | `/api/tokens` | personal API tokens |
-| POST | `/api/user/verify-password` | `{password}` → `{ok}` — bcrypt check the E2E vault flows call before deriving a key (enable / unlock / disable) |
+| POST | `/api/user/verify-password` | `{password}` → `{ok, reason?}` — bcrypt check the E2E vault flows call before deriving a key (enable / unlock / disable). `reason` distinguishes `"wrong-password"` (signed in, bad password) from `"unauthenticated"` (dead session) |
+| POST | `/api/auth/reset-password` | `{newPassword}` → `{ok}` — signed-in recovery for a forgotten password. Requires a valid session; **refused (409) while end-to-end encryption is on** (the password is the key source there — only "Change password" with the current password may rotate it) |
 | GET | `/api/health` | `{ok, driver, counts, version}` |
 | POST | `/api/notes/:id/share` | `{enabled}` → `{path:"/s/<token>"}` (public read-only page) |
 
