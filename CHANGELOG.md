@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.0.6](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.5...v0.0.6) (2026-11-05)
+
+
+### Bug Fixes
+
+* **vault:** signed-in password recovery + honest session errors ([d39ba3c](https://github.com/SudhirDevOps1/NexNotes/commit/d39ba3c4918cce54c71a9dfbf7e9feceadc6f359))
+
 ## [0.0.5](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.4...v0.0.5) (2026-11-05)
 
 
