@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.3.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.2.0...v0.3.0) (2026-11-05)
+
+
+### Features
+
+* **deploy:** honest database errors + operator deployment guide ([a8b3a22](https://github.com/SudhirDevOps1/NexNotes/commit/a8b3a22d7727979fe8675fba858b15621674b1bd))
+
 ## [0.2.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.1.0...v0.2.0) (2026-11-05)
 
 
