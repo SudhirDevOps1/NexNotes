@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.2.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.1.0...v0.2.0) (2026-11-05)
+
+
+### Features
+
+* **local-first:** dead-server boot survival, Postgres deploys out of the box ([4663e78](https://github.com/SudhirDevOps1/NexNotes/commit/4663e787a46038fa2f075c8d9efb900996c33e39))
+
 ## [0.1.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.6...v0.1.0) (2026-11-05)
 
 
