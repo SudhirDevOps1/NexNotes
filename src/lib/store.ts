@@ -299,6 +299,10 @@ async function verifyAccountPassword(password: string): Promise<boolean> {
     if (body.reason === "unauthenticated") throw new SessionExpiredError();
     return false; // definitive: wrong password
   }
+  if (r.status === 429) {
+    // brute-force guard tripped — a wait, not a verdict on the password
+    throw new Error("Too many attempts — wait a minute and try again");
+  }
   if (!r.ok) throw new Error("server unreachable");
   const { ok } = await r.json();
   return Boolean(ok);

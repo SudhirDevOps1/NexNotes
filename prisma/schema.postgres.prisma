@@ -19,6 +19,9 @@ model User {
   id                String   @id @default(cuid())
   email             String   @unique
   passwordHash      String
+  // v2.3.2 — bumped on every password rotation (change/reset); JWTs carry the
+  // version they were minted with, so pre-rotation cookies die everywhere.
+  pwVersion         Int      @default(0)
   encryptionEnabled Boolean  @default(false)
   // v2.0 — account two-factor auth (TOTP, RFC 6238)
   twofaSecret       String?

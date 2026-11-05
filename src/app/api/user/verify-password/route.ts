@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getAuthUser, verifyPassword } from "@/lib/auth";
+import { guard, MIN_5 } from "@/lib/rate-limit";
 
 const schema = z.object({ password: z.string().min(1) });
 
@@ -34,6 +35,16 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
+  }
+
+  // v2.3.2 — this endpoint is an oracle for checking guesses against the
+  // account password; cap it (30 per 5 min is far above interactive use).
+  const limited = guard(req, "verify-pw", user.id, 30, MIN_5);
+  if (limited) {
+    return NextResponse.json(
+      { ok: false, reason: "rate-limited" },
+      { status: 429, headers: { "Retry-After": limited.headers.get("Retry-After") ?? "60" } }
+    );
   }
 
   const full = await db.user.findUnique({

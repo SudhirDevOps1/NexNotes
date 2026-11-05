@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { ensureDemoUser, DEMO_EMAIL } from "@/lib/seed";
 import { verifyTotp, normalizeBackupCode } from "@/lib/totp";
+import { guard, clientIp, MIN_5 } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -64,6 +65,13 @@ export async function POST(req: NextRequest) {
     }
     const email = parsed.data.email.toLowerCase().trim();
 
+    // v2.3.2 — password attempts were the one surface without any limit
+    // (only 2FA codes had one). Per-account and per-IP buckets.
+    const limited =
+      guard(req, "login-ip", clientIp(req), 30, MIN_5) ??
+      guard(req, "login-acct", email, 10, MIN_5);
+    if (limited) return limited;
+
     // keep the shared demo account alive even after DB resets
     if (email === DEMO_EMAIL) {
       try {
@@ -102,7 +110,7 @@ export async function POST(req: NextRequest) {
       attempts.delete(email);
     }
 
-    await createSession(user.id);
+    await createSession(user.id, user.pwVersion);
     return NextResponse.json({
       user: {
         id: user.id,

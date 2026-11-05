@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { verifyPassword, hashPassword, getAuthUser } from "@/lib/auth";
+import { verifyPassword, hashPassword, getAuthUser, createSession } from "@/lib/auth";
+import { guard, HOUR_1 } from "@/lib/rate-limit";
 
 /**
  * POST /api/auth/change-password
@@ -26,12 +27,20 @@ export async function POST(req: NextRequest) {
   const user = await db.user.findUnique({ where: { id: authUser.id } });
   if (!user) return NextResponse.json({ error: "Account not found" }, { status: 404 });
 
+  const limited = guard(req, "change-pw", user.id, 10, HOUR_1);
+  if (limited) return limited;
+
   const ok = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
   if (!ok) return NextResponse.json({ error: "Current password is incorrect." }, { status: 401 });
 
+  // v2.3.2 — rotate the session version in the same write: cookies minted
+  // before this moment (stolen sessions, old devices) stop authenticating,
+  // while THIS device gets a fresh cookie in this very response.
+  const pv = user.pwVersion + 1;
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash: await hashPassword(parsed.data.newPassword) },
+    data: { passwordHash: await hashPassword(parsed.data.newPassword), pwVersion: pv },
   });
+  await createSession(user.id, pv);
   return NextResponse.json({ ok: true });
 }
