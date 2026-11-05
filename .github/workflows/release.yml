@@ -1,13 +1,22 @@
 name: Release
 
-# Automated release train, driven by Google's release-please:
+# Automated release train — direct, no release PR:
 #
-#   push to main        → quality gate → release-please turns Conventional
-#                         Commits into a "chore(main): release nexnotes x.y.z"
-#                         PR (CHANGELOG.md + package.json version bump)
-#   release PR merged   → release-please tags v* and opens the GitHub Release;
-#                         the artifact jobs below build from THAT exact tag
-#   manual v* tag push  → same artifact pipeline against the tag (fallback)
+#   push to main            → quality gate → cut-release reads the Conventional
+#                             Commits since the last v* tag; on feat/fix/perf/
+#                             security/revert it bumps the version, prepends
+#                             the CHANGELOG section, commits
+#                             "chore(main): release nexnotes x.y.z" to main,
+#                             tags v* and opens the GitHub Release
+#   tag cut by that job     → the artifact jobs below build from THAT tag
+#                             (same run — no re-trigger needed)
+#   manual v* tag push      → same artifact pipeline against the tag (fallback)
+#
+# Why not release-please? Its PR flow needs the repository setting
+# "Allow GitHub Actions to create and approve pull requests" (off by default
+# for new repos); without it every push went red with "not permitted to
+# create or approve pull requests". Cutting the release straight on main
+# needs only `contents: write`, which this workflow already grants.
 #
 # Desktop artifacts are real Electron apps (desktop/):
 #   windows → one-click per-user NSIS installer, boot-tested silently
@@ -17,6 +26,11 @@ name: Release
 # CHANGELOG.md is generated from commit messages — never edit it by hand.
 # The app version lives only in package.json (read at build time by
 # src/lib/version.ts), so health endpoint, UI and artifacts cannot drift.
+#
+# Loop safety: the version-bump commit is pushed with GITHUB_TOKEN, and
+# events created by GITHUB_TOKEN never start new workflow runs — the train
+# cannot chase its own tail. A manual dispatch right after a release (or a
+# push with only docs/chore/ci commits) exits green with nothing released.
 
 on:
   push:
@@ -29,8 +43,6 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: write
-  issues: write
 
 jobs:
   quality-gate:
@@ -77,34 +89,47 @@ jobs:
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
 
-  release-please:
-    name: release-please (release PR / tag)
+  cut-release:
+    name: Cut release (version · changelog · tag)
     if: github.ref == 'refs/heads/main'
     needs: quality-gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      releases_created: ${{ steps.rp.outputs.releases_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
-      paths_released: ${{ steps.rp.outputs.paths_released }}
+      releases_created: ${{ steps.cut.outputs.releases_created }}
+      tag_name: ${{ steps.cut.outputs.tag_name }}
     steps:
-      - uses: googleapis/release-please-action@v5
-        id: rp
+      - uses: actions/checkout@v4
         with:
-          command: manifest
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-          # A PAT stored as RELEASE_PLEASE_TOKEN lets the release PR trigger
-          # CI on itself; the built-in GITHUB_TOKEN also works, but events it
-          # creates are ignored by other workflows (anti-recursion rule).
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          # full history + tags: the cutter diffs Conventional Commits
+          # against the last v* tag
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cut the release (bump · changelog · tag · push)
+        id: cut
+        run: node scripts/cut-release.mjs
+
+      - name: Open the GitHub Release
+        if: steps.cut.outputs.releases_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.cut.outputs.tag_name }}" \
+            --title "NexNotes ${{ steps.cut.outputs.tag_name }}" \
+            --notes-file "${{ steps.cut.outputs.notes_file }}" \
+            --latest
 
   build-linux:
     name: Linux — portable server + Electron AppImage
-    # release-please is skipped on tag builds, so the needs gate must be
-    # evaluated explicitly — a plain `needs` would silently skip tag builds.
-    needs: [quality-gate, release-please]
-    if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
+    # the release job is skipped on tag builds, so the needs gate must be
+    # evaluated explicitly — a plain `needs` would silently skip tag builds
+    needs: [quality-gate, cut-release]
+    if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.cut-release.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
     # ubuntu-22.04 is in deprecation brownouts (support ended 2026-09-17) and
     # silently refuses to schedule jobs — build on the current LTS instead.
     runs-on: ubuntu-latest
@@ -115,9 +140,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # release path: the exact tag release-please just created;
+          # release path: the exact tag cut-release just created;
           # manual path: the pushed v* tag. Builds never run off main.
-          ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
+          ref: ${{ needs.cut-release.outputs.tag_name || github.ref }}
 
       - uses: step-security/harden-runner@v2
         with:
@@ -220,8 +245,8 @@ jobs:
 
   build-windows:
     name: Windows — Electron installer (NSIS)
-    needs: [quality-gate, release-please]
-    if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
+    needs: [quality-gate, cut-release]
+    if: ${{ !cancelled() && needs.quality-gate.result == 'success' && (needs.cut-release.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: windows-latest
     timeout-minutes: 35
     env:
@@ -230,7 +255,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
+          ref: ${{ needs.cut-release.outputs.tag_name || github.ref }}
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -312,8 +337,8 @@ jobs:
 
   publish:
     name: Attach artifacts to the GitHub Release
-    needs: [release-please, build-linux, build-windows]
-    if: ${{ !cancelled() && needs.build-linux.result == 'success' && needs.build-windows.result == 'success' && (needs.release-please.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
+    needs: [cut-release, build-linux, build-windows]
+    if: ${{ !cancelled() && needs.build-linux.result == 'success' && needs.build-windows.result == 'success' && (needs.cut-release.outputs.releases_created == 'true' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -340,7 +365,7 @@ jobs:
           # gh reads the repo from the checkout, but being explicit costs
           # nothing and keeps the step honest if the checkout ever goes away
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ needs.release-please.outputs.tag_name || github.ref_name }}
+          TAG: ${{ needs.cut-release.outputs.tag_name || github.ref_name }}
         run: |
           node scripts/make-sums.mjs dist "nexnotes-${TAG}-SHA256SUMS.txt"
           gh release view "$TAG" >/dev/null 2>&1 || \

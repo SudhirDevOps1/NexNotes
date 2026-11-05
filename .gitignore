@@ -35,8 +35,6 @@
 !/LICENSE
 !/.coderabbit.yaml
 !/commitlint.config.mjs
-!/release-please-config.json
-!/.release-please-manifest.json
 !/.husky/
 /.husky/_/
 !/SECURITY.md

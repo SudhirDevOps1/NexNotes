@@ -1,9 +1,8 @@
 /**
  * Conventional Commits enforcement — runs locally via the husky commit-msg
- * hook and keeps release-please's changelog categories meaningful.
+ * hook and keeps the release cutter's changelog categories meaningful.
  *
- * Types release-please maps to changelog sections (see
- * release-please-config.json): feat, fix, security, perf.
+ * Types cut-release.mjs maps to changelog sections: feat, fix, security, perf.
  * Everything else lands in hidden sections or is skipped.
  */
 const config = {

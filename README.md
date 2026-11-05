@@ -183,7 +183,7 @@ Details: [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md)
 | [`docs/VERSIONING.md`](docs/VERSIONING.md) | The 0.x versioning policy + 1.0.0 graduation checklist |
 | [`docs/CI-CD.md`](docs/CI-CD.md) | The 13-workflow pipeline, tier by tier |
 | [`docs/BRANCH-PROTECTION.md`](docs/BRANCH-PROTECTION.md) | Branch protection & rulesets — exact settings |
-| [`docs/RELEASE_SETUP.md`](docs/RELEASE_SETUP.md) | release-please, Electron builds, repo settings |
+| [`docs/RELEASE_SETUP.md`](docs/RELEASE_SETUP.md) | release train, Electron builds, repo settings |
 | [`PLAN.md`](PLAN.md) | Roadmap — shipped plans, verified gate by gate |
 
 ## ⌨️ Highlights

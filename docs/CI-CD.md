@@ -48,5 +48,5 @@ git tag v0.0.2 && git push origin v0.0.2
 ```
 
 Release + Docker workflows pick the tag up automatically. Day-to-day you don't
-cut tags by hand — merged `feat:`/`fix:` commits make release-please open the
-release PR for you (see [`VERSIONING.md`](VERSIONING.md)).
+cut tags by hand — merged `feat:`/`fix:` commits make the next push to main cut
+the release itself (see [`VERSIONING.md`](VERSIONING.md)).
