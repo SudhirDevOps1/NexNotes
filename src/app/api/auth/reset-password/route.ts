@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { hashPassword, getAuthUser } from "@/lib/auth";
+import { hashPassword, getAuthUser, createSession } from "@/lib/auth";
+import { guard, HOUR_1 } from "@/lib/rate-limit";
 
 /**
  * POST /api/auth/reset-password
@@ -39,9 +40,12 @@ export async function POST(req: NextRequest) {
 
   const user = await db.user.findUnique({
     where: { id: authUser.id },
-    select: { id: true, encryptionEnabled: true },
+    select: { id: true, encryptionEnabled: true, pwVersion: true },
   });
   if (!user) return NextResponse.json({ error: "Account not found" }, { status: 404 });
+
+  const limited = guard(req, "reset-pw", user.id, 5, HOUR_1);
+  if (limited) return limited;
 
   if (user.encryptionEnabled) {
     return NextResponse.json(
@@ -53,9 +57,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // v2.3.2 — same rotation contract as change-password: pre-reset cookies
+  // (a device that "forgot" because someone else had it?) die everywhere;
+  // this device gets the fresh cookie in this response.
+  const pv = user.pwVersion + 1;
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash: await hashPassword(parsed.data.newPassword) },
+    data: { passwordHash: await hashPassword(parsed.data.newPassword), pwVersion: pv },
   });
+  await createSession(user.id, pv);
   return NextResponse.json({ ok: true });
 }

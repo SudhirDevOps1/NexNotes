@@ -76,7 +76,7 @@ Caddy: `notes.example.com { reverse_proxy 127.0.0.1:3000 }`
 | Var | Required | Default | Meaning |
 |---|---|---|---|
 | `DATABASE_URL` | ✅ | `file:./db/custom.db` | SQLite file or Postgres URL |
-| `AUTH_SECRET` | ⚠️ prod | dev fallback | JWT signing secret — **set it in production** |
+| `AUTH_SECRET` | ⚠️ prod | auto-generated | JWT signing secret — **set it in production**. Unset: a random secret is generated once and persisted to `db/.auth-secret` (0600), so sessions survive restarts and cannot be forged from the source code. Multi-instance/replica deployments MUST set the env var so every node verifies identically. Rotating the secret signs everyone out once. |
 | `DIRECT_URL` | ❌ | — | non-pooled URL for migrations (Neon) |
 | `PORT` | ❌ | `3000` | server port |
 

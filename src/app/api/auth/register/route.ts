@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword, createSession } from "@/lib/auth";
 import { seedNewUserStarters } from "@/lib/seed";
+import { guard, clientIp, HOUR_1 } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
       );
     }
     const email = parsed.data.email.toLowerCase().trim();
+
+    // v2.3.2 — account creation is also a cost surface (DB rows, starter
+    // notes). Ten per IP per hour is far above any human pace.
+    const limited = guard(req, "register", clientIp(req), 10, HOUR_1);
+    if (limited) return limited;
 
     const existing = await db.user.findUnique({ where: { email } });
     if (existing) {
