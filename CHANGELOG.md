@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.4.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.3.0...v0.4.0) (2026-11-05)
+
+
+### Features
+
+* **db:** self-creating schema on first boot — zero-config install ([7d1e808](https://github.com/SudhirDevOps1/NexNotes/commit/7d1e8089640f3f7012b13463a5d04bceb96f7a1d))
+
 ## [0.3.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.2.0...v0.3.0) (2026-11-05)
 
 
