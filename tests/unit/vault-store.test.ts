@@ -501,3 +501,84 @@ describe("E2E vault store contract", () => {
     expect(useApp.getState().notes.stray.content).toBe(alienCipher); // untouched
   });
 });
+
+describe("vault recovery (v2.3.1)", () => {
+  it("a dead session reports 'sign in again', never 'wrong password', and encrypts nothing", async () => {
+    // The server answers 401 for BOTH "wrong password" and "no valid
+    // session" — the client used to read every 401 as a bad password, so a
+    // stale cookie (server DB rebuilt, session expired) screamed "Wrong
+    // account password" at people whose password was perfectly fine.
+    let patchCalls = 0;
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u === "/api/auth/me") return okJson({ user: USER });
+      if (u === "/api/user/verify-password") {
+        return new Response(JSON.stringify({ ok: false, reason: "unauthenticated" }), { status: 401 });
+      }
+      if (u === "/api/user/settings" && init?.method === "PATCH") {
+        patchCalls++;
+        return okJson({ user: { ...USER, encryptionEnabled: true } });
+      }
+      if (u === "/api/sync") {
+        return okJson({ serverTime: new Date().toISOString(), notes: [], folders: [], tags: [], deletions: [], applied: 0, conflictsCreated: 0 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const { useApp } = await import("@/lib/store");
+    useApp.setState({ user: { ...USER } });
+
+    // seed one plaintext note in memory and in IndexedDB
+    idb.notes.set("n1", { id: "n1", content: "plain text", isEncrypted: false });
+    useApp.setState({
+      notes: {
+        n1: {
+          id: "n1", title: "t", content: "plain text", isEncrypted: false, folderId: null,
+          tagIds: [], starred: false, noteType: "markdown", preventEdit: false,
+          editorWidth: "narrow", locked: false, lockHash: null, conflictOf: null,
+          pinned: false, archived: false, trashed: false, trashedAt: null,
+          createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", dirty: false,
+        },
+      },
+    });
+
+    await expect(useApp.getState().enableEncryption(PW)).rejects.toThrow(
+      /session has expired/
+    );
+    expect(patchCalls).toBe(0); // no settings flip behind a dead session
+    expect(useApp.getState().user!.encryptionEnabled).toBe(false);
+    expect(idb.notes.get("n1")!.content).toBe("plain text"); // nothing encrypted
+  });
+
+  it("resetPassword rotates the password through the recovery endpoint (E2E off)", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u === "/api/auth/me") return okJson({ user: USER });
+      if (u === "/api/auth/reset-password") {
+        bodies.push(JSON.parse(String(init?.body)));
+        return okJson({ ok: true });
+      }
+      if (u === "/api/sync") {
+        return okJson({ serverTime: new Date().toISOString(), notes: [], folders: [], tags: [], deletions: [], applied: 0, conflictsCreated: 0 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    const { useApp } = await import("@/lib/store");
+    useApp.setState({ user: { ...USER } });
+
+    await expect(useApp.getState().resetPassword("brand-new-pw")).resolves.toBeUndefined();
+    expect(bodies).toEqual([{ newPassword: "brand-new-pw" }]);
+
+    // server refusal (E2E on → 409) surfaces its message verbatim
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({ error: "End-to-end encryption is on — the password cannot be reset without the current one." }),
+        { status: 409 }
+      )) as typeof fetch;
+    await expect(useApp.getState().resetPassword("another-pw")).rejects.toThrow(
+      /cannot be reset without the current one/
+    );
+  });
+});

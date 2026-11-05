@@ -61,6 +61,7 @@ export function SettingsDialog() {
   const enableEncryption = useApp((s) => s.enableEncryption);
   const disableEncryption = useApp((s) => s.disableEncryption);
   const changePassword = useApp((s) => s.changePassword);
+  const resetPassword = useApp((s) => s.resetPassword);
   const deleteAccount = useApp((s) => s.deleteAccount);
   const signOut = useApp((s) => s.signOut);
 
@@ -76,6 +77,14 @@ export function SettingsDialog() {
   const [confirmPw, setConfirmPw] = useState("");
   const [cpBusy, setCpBusy] = useState(false);
   const [snBusy, setSnBusy] = useState(false);
+
+  // forgot-password recovery — signed-in users with E2E off can set a new
+  // password without knowing the old one (the server refuses when E2E is on,
+  // where the password IS the key source)
+  const [forgotIn, setForgotIn] = useState<null | "e2e" | "account">(null);
+  const [rpNew, setRpNew] = useState("");
+  const [rpConfirm, setRpConfirm] = useState("");
+  const [rpBusy, setRpBusy] = useState(false);
 
   // driver info
   const [health, setHealth] = useState<Health | null>(null);
@@ -272,6 +281,58 @@ export function SettingsDialog() {
     }
   }
 
+  async function submitForgot(e: React.FormEvent) {
+    e.preventDefault();
+    if (rpNew.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+    if (rpNew !== rpConfirm) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    setRpBusy(true);
+    const origin = forgotIn;
+    try {
+      await resetPassword(rpNew);
+      if (origin === "e2e") {
+        // pick up right where they got stuck: the fresh password is already
+        // in the E2E field, one click on Enable turns the vault on
+        setPw(rpNew);
+        setPwMode("enable");
+      }
+      setForgotIn(null);
+      setRpNew("");
+      setRpConfirm("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not reset password");
+    } finally {
+      setRpBusy(false);
+    }
+  }
+
+  function renderForgotForm() {
+    return (
+      <form onSubmit={submitForgot} className="space-y-2">
+        <p className="text-[11px] text-muted-foreground">
+          You&apos;re signed in and end-to-end encryption is off, so nothing is encrypted yet —
+          setting a new password loses nothing. (With E2E on this is refused: the password is the
+          key source, and &ldquo;Change password&rdquo; is the only safe rotation.)
+        </p>
+        <Input type="password" value={rpNew} onChange={(e) => setRpNew(e.target.value)}
+          placeholder="New password (min 6)" autoFocus autoComplete="new-password" />
+        <Input type="password" value={rpConfirm} onChange={(e) => setRpConfirm(e.target.value)}
+          placeholder="Repeat new password" autoComplete="new-password" />
+        <div className="flex gap-2">
+          <Button type="submit" size="sm" className="nx-accent-bg" disabled={rpBusy || rpNew.length < 6 || !rpConfirm}>
+            {rpBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Set new password
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setForgotIn(null)}>Back</Button>
+        </div>
+      </form>
+    );
+  }
+
   async function onImport(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -456,7 +517,7 @@ export function SettingsDialog() {
             />
           </div>
 
-          {pwMode !== "off" && (
+          {pwMode !== "off" && forgotIn !== "e2e" && (
             <form onSubmit={submitPw} className="rounded-lg border border-dashed p-3 space-y-2.5 bg-muted/40">
               <Label className="text-xs">
                 {pwMode === "enable"
@@ -479,7 +540,23 @@ export function SettingsDialog() {
                   ⚠️ If you forget this password your notes cannot be recovered.
                 </p>
               )}
+              {pwMode === "enable" && (
+                <button
+                  type="button"
+                  className="block text-[11px] underline text-muted-foreground hover:text-foreground"
+                  onClick={() => { setForgotIn("e2e"); setRpNew(""); setRpConfirm(""); }}
+                >
+                  Forgot your password? Set a new one here — encryption is still off, so nothing can be lost
+                </button>
+              )}
             </form>
+          )}
+
+          {forgotIn === "e2e" && (
+            <div className="rounded-lg border border-dashed p-3 space-y-2.5 bg-muted/40">
+              <Label className="text-xs">Set a new password — then hit Enable below</Label>
+              {renderForgotForm()}
+            </div>
           )}
 
           {/* change password */}
@@ -508,6 +585,16 @@ export function SettingsDialog() {
                 </Button>
               </form>
             )}
+            {!user?.encryptionEnabled && !showChangePw && forgotIn !== "account" && (
+              <button
+                type="button"
+                className="block text-[11px] underline text-muted-foreground hover:text-foreground"
+                onClick={() => { setForgotIn("account"); setRpNew(""); setRpConfirm(""); }}
+              >
+                Forgot your current password?
+              </button>
+            )}
+            {forgotIn === "account" && renderForgotForm()}
           </div>
 
           {/* v2.0 — account two-factor authentication */}

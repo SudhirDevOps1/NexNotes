@@ -123,6 +123,7 @@ interface AppActions {
   downloadFile: (id: string) => Promise<void>;
   resolveConflict: (id: string, action: "keep" | "discard") => Promise<void>;
   changePassword: (currentPw: string, newPw: string) => Promise<void>;
+  resetPassword: (newPw: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   ensureTag: (name: string) => Promise<string>;
   deleteTag: (id: string) => Promise<void>;
@@ -269,6 +270,17 @@ export interface VaultResult { lockedNotes: number }
  *  (offline / 5xx) so callers can fall back to local verification.
  *  (v2.3 bugfix — used to be nothing: any typo encrypted the whole vault with
  *  a key nobody knew, and a fresh device accepted any password at unlock.) */
+/* Thrown when the server answers "unauthenticated" — the session cookie is
+ * dead (expired, or the server DB was rebuilt). Callers must surface this
+ * as "sign in again", never as "wrong password": the typed password may be
+ * perfectly fine. (v2.3.1 bugfix — every 401 used to read as a bad password.) */
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("Your session has expired — please sign in again");
+    this.name = "SessionExpiredError";
+  }
+}
+
 async function verifyAccountPassword(password: string): Promise<boolean> {
   let r: Response;
   try {
@@ -280,7 +292,13 @@ async function verifyAccountPassword(password: string): Promise<boolean> {
   } catch {
     throw new Error("server unreachable");
   }
-  if (r.status === 401 || r.status === 403) return false; // definitive: wrong password
+  if (r.status === 401 || r.status === 403) {
+    // Same status code, two very different situations — the reason field
+    // separates them. A dead session is NOT a wrong password.
+    const body = await r.json().catch(() => ({} as { reason?: string }));
+    if (body.reason === "unauthenticated") throw new SessionExpiredError();
+    return false; // definitive: wrong password
+  }
   if (!r.ok) throw new Error("server unreachable");
   const { ok } = await r.json();
   return Boolean(ok);
@@ -1258,6 +1276,24 @@ export const useApp = create<AppStore>((set, get) => ({
     });
   },
 
+  /* Signed-in recovery for a forgotten password — see the route comment for
+   * the server-side guard rails. The server refuses when E2E is on, so this
+   * can never orphan a vault. Session stays valid; nothing local changes. */
+  async resetPassword(newPw) {
+    const state = get();
+    if (!state.user) throw new Error("Not signed in");
+    const r = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: newPw }),
+    });
+    if (!r.ok) {
+      const { error } = await r.json().catch(() => ({ error: "Could not reset password" }));
+      throw new Error(error || "Could not reset password");
+    }
+    toast.success("Password updated — use it to enable encryption and on other devices");
+  },
+
   async deleteAccount() {
     const state = get();
     if (!state.user) return;
@@ -1386,7 +1422,8 @@ export const useApp = create<AppStore>((set, get) => ({
     let reachable = true;
     try {
       verified = await verifyAccountPassword(password);
-    } catch {
+    } catch (e) {
+      if (e instanceof SessionExpiredError) throw e; // not a password problem
       reachable = false;
     }
     if (!verified) {
@@ -1446,7 +1483,8 @@ export const useApp = create<AppStore>((set, get) => ({
     let reachable = true;
     try {
       verified = await verifyAccountPassword(password);
-    } catch {
+    } catch (e) {
+      if (e instanceof SessionExpiredError) throw e; // not a password problem
       reachable = false;
     }
     if (!verified && reachable) throw new Error("Wrong password");
@@ -1501,7 +1539,8 @@ export const useApp = create<AppStore>((set, get) => ({
     let reachable = true;
     try {
       verified = await verifyAccountPassword(password);
-    } catch {
+    } catch (e) {
+      if (e instanceof SessionExpiredError) throw e; // not a password problem
       reachable = false; // offline — fall back to the local probe
     }
     if (!verified) {
