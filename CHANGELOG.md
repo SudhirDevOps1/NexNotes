@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.0.5](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.4...v0.0.5) (2026-11-05)
+
+
+### Bug Fixes
+
+* **vault:** verify the account password before deriving the E2E key ([d656375](https://github.com/SudhirDevOps1/NexNotes/commit/d656375d06db09911e1436fe949a9647ecc85f48))
+
 ## [0.0.4](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.3...v0.0.4) (2026-11-04)
 
 
