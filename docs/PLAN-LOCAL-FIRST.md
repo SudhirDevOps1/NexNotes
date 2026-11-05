@@ -52,6 +52,18 @@ changes.
    removed from `db:push` earlier lived on in the Postgres path, where a schema
    drift would silently wipe a live database. It now pushes safely and explains
    the explicit flag if Prisma refuses.
+6. **A fresh install demanded a manual `npx prisma db push` (2026-11-05, fixed
+   same day).** The very first request against an empty database answered 503
+   "schema is out of date — run `npx prisma db push`" — the one step the
+   zero-config promise still required. Every build now ships an idempotent DDL
+   snapshot (`npm run db:ddl` → `prisma/db-init.<driver>.sql`, parity-pinned);
+   `src/lib/db-bootstrap.ts` replays it when the schema is missing and retries
+   the request (login/register/verify-password/me/health all wired). Missing
+   `DATABASE_URL` now defaults to `file:./db/custom.db` with its folder
+   auto-created, so a bare `npm run dev` (or Docker/desktop first boot) needs
+   nothing at all. Enterprise escape hatch: `NEXNOTES_AUTO_MIGRATE=0` reverts
+   to controlled migrations; the E2E gate no longer runs `db push`, making CI
+   itself prove the self-heal on every commit.
 
 ## Deploy matrix after Phase 1
 

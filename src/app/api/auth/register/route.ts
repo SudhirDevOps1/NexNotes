@@ -5,6 +5,7 @@ import { hashPassword, createSession } from "@/lib/auth";
 import { seedNewUserStarters } from "@/lib/seed";
 import { guard, clientIp, HOUR_1 } from "@/lib/rate-limit";
 import { dbErrorResponse } from "@/lib/db-errors";
+import { retryAfterSchemaBootstrap } from "@/lib/db-bootstrap";
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -12,8 +13,14 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // parsed once — the schema-bootstrap retry below re-runs the handler
+  let body: unknown;
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    body = null;
+  }
+  const handle = async (): Promise<Response> => {
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -43,7 +50,14 @@ export async function POST(req: NextRequest) {
     // never land a new user on an empty app
     void seedNewUserStarters(user.id).catch(() => {});
     return NextResponse.json({ user });
+  };
+
+  try {
+    return await handle();
   } catch (e) {
+    // fresh-install empty database → create the schema and try once more
+    const retried = await retryAfterSchemaBootstrap(e, handle);
+    if (retried) return retried;
     console.error("register error", e);
     // honest failure for broken deploys — see src/lib/db-errors.ts
     const dbErr = dbErrorResponse(e);

@@ -37,4 +37,18 @@ test.describe("NexNotes smoke journey", () => {
     expect(register.ok()).toBeTruthy();
     expect((await register.json()).user.email).toBe(email);
   });
+
+  test("fresh boot self-heals the database — no manual db push", async ({ request }) => {
+    // This suite boots the standalone server against a NEVER-PUSHED database
+    // (the workflow creates no tables). The server must create its own schema:
+    // health reports the probe as ready, and auth endpoints answer normally
+    // instead of the old "schema is out of date — run npx prisma db push".
+    const health = await request.get("/api/health");
+    expect(health.ok()).toBeTruthy();
+    expect((await health.json()).dbReady).toBe(true);
+
+    const me = await request.get("/api/auth/me");
+    expect(me.status()).toBe(401);
+    expect((await me.json()).user).toBeNull();
+  });
 });

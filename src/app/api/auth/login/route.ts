@@ -7,6 +7,7 @@ import { ensureDemoUser, DEMO_EMAIL } from "@/lib/seed";
 import { verifyTotp, normalizeBackupCode } from "@/lib/totp";
 import { guard, clientIp, MIN_5 } from "@/lib/rate-limit";
 import { dbErrorResponse } from "@/lib/db-errors";
+import { retryAfterSchemaBootstrap } from "@/lib/db-bootstrap";
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -59,8 +60,16 @@ async function verifyTwoFactor(
 }
 
 export async function POST(req: NextRequest) {
+  // parsed once — the schema-bootstrap retry below re-runs the handler, and a
+  // NextRequest body can only be consumed a single time
+  let body: unknown;
   try {
-    const parsed = schema.safeParse(await req.json());
+    body = await req.json();
+  } catch {
+    body = null;
+  }
+  const handle = async (): Promise<Response> => {
+    const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Enter a valid email and password." }, { status: 400 });
     }
@@ -120,7 +129,15 @@ export async function POST(req: NextRequest) {
         createdAt: user.createdAt.toISOString(),
       },
     });
+  };
+
+  try {
+    return await handle();
   } catch (e) {
+    // empty database on a fresh install? create the schema and try once more
+    // before giving up — the first boot must not ask the operator for `db push`
+    const retried = await retryAfterSchemaBootstrap(e, handle);
+    if (retried) return retried;
     console.error("login error", e);
     // a broken deploy must say WHY (unreachable db, missing tables, driver
     // mismatch, read-only fs) instead of a "Try again" that can never work
