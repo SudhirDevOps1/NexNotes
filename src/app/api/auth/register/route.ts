@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { hashPassword, createSession } from "@/lib/auth";
 import { seedNewUserStarters } from "@/lib/seed";
 import { guard, clientIp, HOUR_1 } from "@/lib/rate-limit";
+import { dbErrorResponse } from "@/lib/db-errors";
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ user });
   } catch (e) {
     console.error("register error", e);
+    // honest failure for broken deploys — see src/lib/db-errors.ts
+    const dbErr = dbErrorResponse(e);
+    if (dbErr) return NextResponse.json(dbErr.body, { status: dbErr.status });
     return NextResponse.json({ error: "Could not create the account. Try again." }, { status: 500 });
   }
 }

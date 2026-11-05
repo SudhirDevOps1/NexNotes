@@ -3,6 +3,9 @@
 NexNotes ships as a single Node/Bun app (web + API + auth) with a switchable database layer.
 Default is **SQLite** (zero config). Neon / any Postgres is one command away.
 
+> Deploying to Vercel or choosing between SQLite/Postgres per platform?
+> See [`DEPLOYMENT.md`](DEPLOYMENT.md) — this page covers self-hosted servers.
+
 ## 1. Docker Compose (recommended)
 
 ```bash
@@ -42,12 +45,17 @@ User=nexnotes
 ## 3. Neon Postgres (or any Postgres)
 
 ```bash
-node scripts/db-switch.mjs postgres "postgresql://user:pass@ep-cool-name.neon.tech/nexnotes?sslmode=require"
-bunx prisma db push
-bun run dev        # or rebuild for production
+DATABASE_URL="postgresql://user:pass@ep-cool-name.neon.tech/nexnotes?sslmode=require" bunx prisma db push
+DATABASE_URL="postgresql://user:pass@ep-cool-name.neon.tech/nexnotes?sslmode=require" bun run dev
 ```
 
-`scripts/db-switch.mjs` rewrites `prisma/schema.prisma` (provider + url) and your `.env`.
+The datasource driver follows `DATABASE_URL` automatically at install/build
+time (`scripts/pick-schema.mjs`). The older manual switch is still there:
+
+```bash
+node scripts/db-switch.mjs postgres "postgresql://user:pass@ep-cool-name.neon.tech/nexnotes?sslmode=require"
+```
+
 To go back to SQLite: `node scripts/db-switch.mjs sqlite`.
 
 Neon notes:

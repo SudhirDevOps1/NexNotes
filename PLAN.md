@@ -207,3 +207,112 @@ Electron per the request "electron se app bne":
 ### Verification gate
 same as 2.1.0, plus: AppImage boot (health + UI shell) verified locally under
 Xvfb; NSIS smoke runs on a real windows runner before anything is published.
+
+---
+
+## 5. v0.1.0 — "offline-first, deploy-anywhere" (plan-first, 2026-11-05)
+
+**User ask:** app Standard Notes ki tarah local/offline chale; jab deploy karein
+(Vercel / Cloudflare Pages) aur DATABASE_URL mein SQLite ya Postgres dein tab
+wahan bhi chale; warna locally SQLite par hi chale. Sync optional rahe —
+"syns krna ho tab jakr add kreinge". (Screenshots: fresh deploy par register
+aur login dono 500 de rahe the.)
+
+### 5.0 Audit — what already works (no changes needed)
+
+The local-first engine shipped with v2.x already covers the Standard-Notes
+behaviour; this round must NOT rebuild it:
+
+- **IndexedDB is the source of truth** (`src/lib/local-db.ts`): every mutation
+  writes memory → idb instantly, then a debounced push (`/api/sync`).
+- **Offline queue + tombstones**: failed pushes stay `dirty` in idb and flush
+  on the next `online` event / successful sync; deletes queue as tombstones.
+- **LWW sync with conflict copies** (`/api/sync`): client-owned `updatedAt`,
+  stale pushes are preserved as conflict notes instead of being dropped.
+- **Offline session continuation** (`boot()`): `/api/auth/me` unreachable +
+  cached `lastUser` → app opens from the local cache.
+- **Offline vault unlock**: server unreachable → local ciphertext probe
+  (≥1 note must decrypt) instead of a hard server dependency.
+- **PWA shell cache** (`public/sw.js`): navigations/assets cached, API never
+  cached (idb owns offline data).
+
+### 5.1 Root cause of the failed deploy (the screenshots)
+
+1. Prisma's provider is fixed at `prisma generate` time — `provider = env()`
+   is still unsupported upstream. `schema.prisma` ships as **sqlite**, so a
+   deploy with a Postgres `DATABASE_URL` produced a SQLite-bound client whose
+   every query throws → register/login fell into the generic
+   `500 "Could not create the account. Try again."` / `"Login failed. Try
+   again."` catches. Nothing told the operator the actual problem.
+2. SQLite itself cannot persist on serverless (Vercel/Cloudflare) — the
+   filesystem is ephemeral/read-only. That is a platform fact, not a bug;
+   the app must detect it and say so honestly.
+3. A fresh Postgres database has no tables until `prisma db push` runs once.
+4. `Dockerfile` advertised a `DB_SCHEMA` build-arg that nothing consumed
+   (fixed in v0.2.0 — `pick-schema.mjs` now reads it before generate).
+
+### 5.2 Phase A — provider auto-detect (shipped in v0.2.0, commit 4663e78)
+
+Landed while this plan was being written — `scripts/pick-schema.mjs` +
+`scripts/postinstall.mjs` + `scripts/finish-build.mjs` implement the same
+idea (datasource follows `DATABASE_URL` / `DB_SCHEMA` at install/build time;
+sqlite↔postgres mirrors kept in sync by `npm run db:mirror` and pinned by
+tests/unit/schema-parity.test.ts), plus dead-server boot survival in the
+store. This round adopts that mechanism as-is and adds what it did not
+cover:
+
+- **honest database errors** (below) — the missing half: with the driver
+  fixed, a still-broken deploy (unreachable host, no tables, wrong driver,
+  read-only fs) used to fail as a generic 500 "Try again";
+- the operator-facing deploy guide (docs/DEPLOYMENT.md).
+
+### 5.3 Phase B — honest database errors (shipped in this round)
+
+- `src/lib/db-errors.ts`: maps Prisma's P1001/P1002/P1003/P1017/P2021/P2022
+  plus three no-code failures (driver/protocol mismatch, unopenable SQLite
+  file = SQLITE_CANTOPEN, read-only filesystem) to actionable 503 messages
+  ("Cannot reach the database — check DATABASE_URL…", "…has no tables yet —
+  run `npx prisma db push`…", "SQLite can't persist on this platform — use
+  Postgres…"). Unknown errors keep the generic 500.
+- Wired into register, login, `/api/auth/me` and `verify-password` on top of
+  the v0.1.0 rate-limiting; the client already surfaces server error strings
+  verbatim, so a broken deploy now reads "Cannot reach the database — check
+  DATABASE_URL" instead of "Try again."
+
+### 5.4 Phase C — the supported deploy matrix (docs: DEPLOYMENT.md)
+
+| Target | Database | Status |
+|---|---|---|
+| Local dev / Node / Bun / Desktop (Electron) | SQLite | ✅ default, zero-config |
+| Docker / any VPS | SQLite or Postgres | ✅ compose + build-arg |
+| **Vercel** | **Postgres (Neon/Supabase)** | ✅ set `DATABASE_URL`, run `prisma db push` once, deploy |
+| Vercel / serverless | SQLite | ❌ by platform design — app now says so honestly (503) |
+| Cloudflare Pages/Workers | any | ⚠️ Phase D (below) |
+
+### 5.5 Phase D — Cloudflare Pages/Workers (planned, experimental)
+
+Prisma's Rust query engine cannot execute in workerd, and Next.js API routes
+on Pages need the edge runtime. Viable path (tracked, not shipped yet):
+Prisma **driver adapters** (`previewFeatures = ["driverAdapters"]` +
+`@prisma/adapter-neon` over Neon's HTTP driver — no native engine) behind an
+explicit `NEXNOTES_USE_ADAPTER=1` branch in `src/lib/db.ts`, built with
+OpenNext (`@opennextjs/cloudflare`). Until that lands, the honest guidance is:
+run the Node server on Vercel/VPS/Docker and put Cloudflare in front as
+DNS/proxy — same URL, zero app changes.
+
+### 5.6 Sync stays optional by design
+
+Notes never require the network: create/edit/trash work fully offline, and
+sync is just the background flush to whatever server the user points the app
+at (their own deploy). Nothing to "turn on" — no account change, no new
+service. The deploy matrix above only changes where *that optional* server
+lives.
+
+### Verification gate (this round)
+pick-schema roundtrip sqlite→postgres→sqlite with `prisma generate` on each
+side · unit tests green (57: honest-error mapping + the existing suites incl.
+schema-parity and offline-boot) · `tsc --noEmit` + eslint clean · production
+build boots · live smoke: health, register, login, wrong-password 401, demo
+login, sync round-trip · broken-`DATABASE_URL` boots return the honest 503
+bodies (mismatch, empty db, unopenable file) · conventional commit, CI green
+after push.
