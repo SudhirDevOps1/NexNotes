@@ -1,6 +1,9 @@
 // NexNotes — clean-room local-first notes app
-// Active driver: SQLite (sandbox). For Neon/Postgres see prisma/schema.postgres.prisma
-// and scripts/db-switch.mjs
+// Datasource driver: picked automatically from DATABASE_URL / DB_SCHEMA at
+// install/build time by scripts/pick-schema.mjs (postgresql:// → Postgres /
+// Neon, anything else → SQLite). prisma/schema.postgres.prisma is the
+// generated mirror — run `npm run db:mirror` after schema edits; the parity
+// test fails CI when it drifts. Manual override: scripts/db-switch.mjs.
 
 generator client {
   provider = "prisma-client-js"

@@ -6,6 +6,7 @@ import { verifyPassword, createSession } from "@/lib/auth";
 import { ensureDemoUser, DEMO_EMAIL } from "@/lib/seed";
 import { verifyTotp, normalizeBackupCode } from "@/lib/totp";
 import { guard, clientIp, MIN_5 } from "@/lib/rate-limit";
+import { dbErrorResponse } from "@/lib/db-errors";
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -121,6 +122,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error("login error", e);
+    // a broken deploy must say WHY (unreachable db, missing tables, driver
+    // mismatch, read-only fs) instead of a "Try again" that can never work
+    const dbErr = dbErrorResponse(e);
+    if (dbErr) return NextResponse.json(dbErr.body, { status: dbErr.status });
     return NextResponse.json({ error: "Login failed. Try again." }, { status: 500 });
   }
 }

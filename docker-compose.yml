@@ -1,9 +1,12 @@
 # NexNotes — one-command self-hosting
 #   docker compose up -d        → http://localhost:3000
 #
-# Neon / managed Postgres instead of SQLite:
-#   1. set DATABASE_URL + run `node scripts/db-switch.mjs postgres "$DATABASE_URL"` before building
-#   2. or mount a prebuilt image — see docs/SELF-HOSTING.md
+# Neon / managed Postgres instead of SQLite (two options):
+#   1. build the image for it, then run with a matching URL:
+#        docker compose build --build-arg DB_SCHEMA=postgres
+#      and uncomment DATABASE_URL below (the client is provider-bound —
+#      build-time and run-time URLs must match, see docs/DEPLOYMENT.md)
+#   2. or mount a prebuilt image — see docs/DEPLOYMENT.md
 
 services:
   nexnotes:
@@ -17,6 +20,8 @@ services:
       # generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
       - AUTH_SECRET=${AUTH_SECRET:-please-change-this-secret}
       - DATABASE_URL=file:/app/db/custom.db
+      # Postgres instead (image must be built with the same URL — see header):
+      # - DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
     volumes:
       - nexnotes_data:/app/db
     healthcheck:

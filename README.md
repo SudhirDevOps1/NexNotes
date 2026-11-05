@@ -164,13 +164,18 @@ bun run dev                   # → http://localhost:3000
 
 ### Use Neon Postgres (or any Postgres)
 
+Set `DATABASE_URL` to a `postgresql://…` URL and you're done — the schema
+switches automatically at install/build time (`scripts/pick-schema.mjs`):
+
 ```bash
-node scripts/db-switch.mjs postgres "postgresql://user:pass@ep-xxx.neon.tech/nexnotes?sslmode=require"
-bun run db:push
-bun run dev
+DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/nexnotes?sslmode=require" bun run db:push
+DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/nexnotes?sslmode=require" bun run dev
 ```
 
-Details: [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md)
+(The manual `node scripts/db-switch.mjs postgres "…"` switch still works.)
+
+Deploying to **Vercel / Docker / VPS** — full guide with the Cloudflare
+status: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ## 📚 Documentation
 
@@ -179,6 +184,7 @@ Details: [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md)
 | [`docs/FEATURES.md`](docs/FEATURES.md) | Full feature matrix vs Standard Notes |
 | [`docs/API.md`](docs/API.md) · [`docs/PRIVACY.md`](docs/PRIVACY.md) | REST API reference · the privacy model |
 | [`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md) | Docker, SQLite/Postgres, backups, reverse proxy |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Vercel + Neon step-by-step, Cloudflare status, troubleshooting |
 | [`docs/SECURITY-ARCHITECTURE.md`](docs/SECURITY-ARCHITECTURE.md) | Threat model, crypto choices, sandboxing |
 | [`docs/VERSIONING.md`](docs/VERSIONING.md) | The 0.x versioning policy + 1.0.0 graduation checklist |
 | [`docs/CI-CD.md`](docs/CI-CD.md) | The 13-workflow pipeline, tier by tier |
