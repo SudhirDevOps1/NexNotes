@@ -11,6 +11,7 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:mirror": "node scripts/pick-schema.mjs --mirror",
+    "db:ddl": "node scripts/gen-ddl.mjs",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",

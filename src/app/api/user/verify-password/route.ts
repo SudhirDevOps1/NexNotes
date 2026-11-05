@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getAuthUser, verifyPassword } from "@/lib/auth";
 import { guard, MIN_5 } from "@/lib/rate-limit";
 import { dbErrorResponse } from "@/lib/db-errors";
+import { ensureSchemaReady } from "@/lib/db-bootstrap";
 
 const schema = z.object({ password: z.string().min(1) });
 
@@ -32,12 +33,18 @@ export async function POST(req: NextRequest) {
   try {
     user = await getAuthUser();
   } catch (e) {
-    // 503 here reads as "server unreachable" on the client, which flips the
-    // vault flows to their offline fallbacks instead of "wrong password"
-    console.error("verify-password error", e);
-    const dbErr = dbErrorResponse(e);
-    if (dbErr) return NextResponse.json({ ok: false, ...dbErr.body }, { status: dbErr.status });
-    throw e;
+    // empty database on a fresh install → self-create the schema and retry
+    // before surfacing the honest 503 (which reads as "server unreachable" on
+    // the client and flips vault flows to offline fallbacks)
+    try {
+      await ensureSchemaReady();
+      user = await getAuthUser();
+    } catch {
+      console.error("verify-password error", e);
+      const dbErr = dbErrorResponse(e);
+      if (dbErr) return NextResponse.json({ ok: false, ...dbErr.body }, { status: dbErr.status });
+      throw e;
+    }
   }
   if (!user) {
     return NextResponse.json({ ok: false, reason: "unauthenticated" }, { status: 401 });
@@ -65,10 +72,18 @@ export async function POST(req: NextRequest) {
       select: { passwordHash: true },
     });
   } catch (e) {
-    console.error("verify-password error", e);
-    const dbErr = dbErrorResponse(e);
-    if (dbErr) return NextResponse.json({ ok: false, ...dbErr.body }, { status: dbErr.status });
-    throw e;
+    try {
+      await ensureSchemaReady();
+      full = await db.user.findUnique({
+        where: { id: user.id },
+        select: { passwordHash: true },
+      });
+    } catch {
+      console.error("verify-password error", e);
+      const dbErr = dbErrorResponse(e);
+      if (dbErr) return NextResponse.json({ ok: false, ...dbErr.body }, { status: dbErr.status });
+      throw e;
+    }
   }
   if (!full) {
     return NextResponse.json({ ok: false, reason: "unauthenticated" }, { status: 401 });

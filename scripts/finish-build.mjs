@@ -45,4 +45,13 @@ if (!serverDir) {
 
 cpSync(path.join(root, ".next", "static"), path.join(serverDir, ".next", "static"), { recursive: true });
 cpSync(path.join(root, "public"), path.join(serverDir, "public"), { recursive: true });
+
+// Ship the DDL snapshots next to server.js so src/lib/db-bootstrap.ts can
+// self-create the schema on a fresh standalone/Docker/desktop boot — the
+// runtime has no prisma CLI, only these files.
+for (const f of ["db-init.sqlite.sql", "db-init.postgres.sql"]) {
+  const src = path.join(root, "prisma", f);
+  if (existsSync(src)) fs.copyFileSync(src, path.join(serverDir, f));
+}
+
 console.log(`✓ standalone assets copied → ${path.relative(root, serverDir)}`);

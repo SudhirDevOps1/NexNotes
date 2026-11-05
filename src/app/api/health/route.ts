@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { APP_VERSION } from "@/lib/version";
+import { ensureSchemaReady } from "@/lib/db-bootstrap";
 
 /**
  * GET /api/health — liveness for the desktop shell's boot gate, plus driver +
@@ -25,7 +26,12 @@ export async function GET() {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const probed = await Promise.race([
-      Promise.all([db.note.count(), db.user.count(), db.fileItem.count()]),
+      (async () => {
+        // first run on a fresh install? the schema creates itself here, so the
+        // login page's health probe heals the database before the first click
+        await ensureSchemaReady();
+        return await Promise.all([db.note.count(), db.user.count(), db.fileItem.count()]);
+      })(),
       new Promise<null>((resolve) => {
         timer = setTimeout(() => resolve(null), COUNT_PROBE_TIMEOUT_MS);
       }),

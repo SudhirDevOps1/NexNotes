@@ -40,17 +40,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Generate Prisma client + fresh E2E database
-        run: |
-          bunx prisma generate
-          mkdir -p db
-          bunx prisma db push --skip-generate
-
       - name: Build standalone bundle
-        run: |
-          bunx next build
-          cp -r .next/static .next/standalone/.next/
-          cp -r public .next/standalone/
+        # No `prisma db push` step on purpose: the workflow is the living proof
+        # of the zero-config first boot — the server creates its own schema on
+        # startup (src/lib/db-bootstrap.ts), npm run build ships the DDL
+        # snapshot the runtime replays (scripts/finish-build.mjs).
+        run: npm run build
         env:
           AUTH_SECRET: ci-e2e-secret-not-for-production
 
