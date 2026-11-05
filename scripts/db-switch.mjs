@@ -61,6 +61,16 @@ if (mode === "postgres") {
 console.log(`→ Active driver: ${mode}`);
 execSync(`npx prisma generate --schema ${active}`, { stdio: "inherit" });
 if (mode === "postgres") {
-  execSync(`npx prisma db push --accept-data-loss --schema ${active}`, { stdio: "inherit" });
+  // no --accept-data-loss here: a live database must never be silently
+  // reshaped (the old line wiped a production DB on schema drift). Prisma
+  // refusing IS the safety feature — an explicit flag stays a human decision.
+  try {
+    execSync(`npx prisma db push --schema ${active}`, { stdio: "inherit" });
+  } catch {
+    console.error("✗ prisma db push refused to apply this schema — it would drop data.");
+    console.error("  If (and only if) that is intended, run it yourself:");
+    console.error(`    npx prisma db push --accept-data-loss --schema ${active}`);
+    process.exit(1);
+  }
 }
 console.log(`✓ NexNotes now uses ${mode.toUpperCase()}${mode === "postgres" ? " (Neon-ready)" : ""}`);

@@ -536,17 +536,26 @@ export const useApp = create<AppStore>((set, get) => ({
       })(),
     });
 
-    // 2. session check
+    // 2. session check — a server we cannot REACH is not a session that is
+    // DEAD. Only a definitive 401 signs the user out; when the request itself
+    // fails (dev server stopped, Vercel asleep, train Wi-Fi), continue with
+    // the cached session so notes stay open and queued edits sync when the
+    // server is back. navigator.onLine cannot drive this: it stays true on
+    // any network with an unreachable server, which used to bounce people to
+    // the login screen with all their local notes hidden (v2.3.3).
     let user: UserDTO | null = null;
+    let serverUnreachable = false;
     try {
       const r = await fetch("/api/auth/me");
-      user = r.ok ? (await r.json()).user : null;
+      if (r.ok) user = (await r.json()).user;
+      // 401/403 → stay signed out: the session really is gone server-side
     } catch {
-      user = null; // offline — fall back to cached session below
+      serverUnreachable = true; // offline — fall back to cached session below
     }
 
-    if (!user && lastUser && get().online === false) {
+    if (!user && lastUser && (serverUnreachable || get().online === false)) {
       user = lastUser; // offline session continuation
+      if (serverUnreachable) set({ online: false }); // the chip must tell the truth
     }
 
     if (!user) {
@@ -575,11 +584,17 @@ export const useApp = create<AppStore>((set, get) => ({
   },
 
   async signIn(email, password, code) {
-    const r = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, ...(code ? { code } : {}) }),
-    });
+    let r: Response;
+    try {
+      r = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, ...(code ? { code } : {}) }),
+      });
+    } catch {
+      // the browser's raw "Failed to fetch" teaches nobody anything
+      throw new Error("Can't reach the server — check your connection, or start it with `npm run dev`.");
+    }
     if (r.ok) {
       const data = (await r.json()) as { user?: UserDTO; twoFactorRequired?: boolean };
       if (data.twoFactorRequired) {
@@ -608,11 +623,16 @@ export const useApp = create<AppStore>((set, get) => ({
   },
 
   async signUp(email, password) {
-    const r = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    let r: Response;
+    try {
+      r = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      throw new Error("Can't reach the server — check your connection and try again.");
+    }
     if (!r.ok) {
       const { error } = await r.json().catch(() => ({ error: "Registration failed" }));
       throw new Error(error || "Registration failed");

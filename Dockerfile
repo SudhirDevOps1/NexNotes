@@ -12,12 +12,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # default SQLite schema; pass --build-arg DB_SCHEMA=postgres for Neon/Postgres
+# (the arg is read by scripts/pick-schema.mjs BEFORE generate — it used to be
+# documented but never actually read, so "postgres" builds shipped SQLite)
 ARG DB_SCHEMA=sqlite
 ENV DATABASE_URL="file:./db/custom.db"
-RUN ./node_modules/.bin/prisma generate \
+RUN node scripts/pick-schema.mjs "$DB_SCHEMA" \
+ && ./node_modules/.bin/prisma generate \
  && ./node_modules/.bin/next build \
- && cp -r .next/static .next/standalone/.next/ \
- && cp -r public .next/standalone/
+ && node scripts/finish-build.mjs
 
 FROM oven/bun:1-slim AS runner
 WORKDIR /app
