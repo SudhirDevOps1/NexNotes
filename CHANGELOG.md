@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.1.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.6...v0.1.0) (2026-11-05)
+
+
+### Features
+
+* **auth:** brute-force limits, session rotation, no more public secret ([ff23d01](https://github.com/SudhirDevOps1/NexNotes/commit/ff23d01480053baaa8bd733354c3822d7af37b38))
+
 ## [0.0.6](https://github.com/SudhirDevOps1/NexNotes/compare/v0.0.5...v0.0.6) (2026-11-05)
 
 
