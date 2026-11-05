@@ -1,9 +1,10 @@
 # Release engineering — setup checklist
 
-NexNotes ships with Google's [release-please](https://github.com/googleapis/release-please-action)
-wired end-to-end: Conventional Commits in, tagged releases with real artifacts out.
-This document is the operating manual. Nothing here is aspirational — every piece
-runs in CI today.
+NexNotes ships a self-contained release train: Conventional Commits in, tagged
+releases with real artifacts out. The cutter is a small repo script
+(`scripts/cut-release.mjs`) driven by GitHub Actions — no third-party app, no
+release PR, no special repository settings. This document is the operating
+manual. Nothing here is aspirational — every piece runs in CI today.
 
 ---
 
@@ -16,13 +17,12 @@ git commit -m "feat: ..."        # local (husky enforces the convention)
 quality-gate                     # lint · typecheck · unit tests · build
       │
       ▼
-release-please                   # opens/updates a release PR:
-      │                          #   chore(main): release nexnotes x.y.z
-      │                          #   — bumps package.json
-      │                          #   — appends CHANGELOG.md (machine-generated)
-      ▼  maintainer merges the PR
-tag v* + GitHub Release created  # artifacts build from THAT exact tag
-      │
+cut-release                      # scripts/cut-release.mjs — on feat/fix/perf/
+      │                          # security/revert commits since the last v* tag:
+      │                          #   — bumps package.json + desktop/package.json
+      │                          #   — prepends the CHANGELOG.md section
+      │                          #   — commits chore(main): release nexnotes x.y.z
+      │                          #   — tags v* + opens the GitHub Release
       ▼
 build-linux                      # portable server (tar.gz + windows zip)
       │                          # + Electron AppImage — both boot-tested
@@ -33,8 +33,9 @@ build-windows                    # Electron NSIS installer — silent-installed
 publish                          # one SHA256SUMS + gh release upload <tag>
 ```
 
-Manual fallback: pushing any `v*` tag skips release-please and runs the same
-artifact pipeline against that tag.
+Pushes with only `docs:`/`chore:`/`ci:` commits exit green without cutting a
+release. Manual fallback: pushing any `v*` tag skips the cutter and runs the
+same artifact pipeline against that tag.
 
 ## 2. Commit convention (enforced)
 
@@ -50,7 +51,8 @@ pre-commit (`.husky/pre-commit` → `lint-staged`).
 | `perf:` | Performance | patch |
 | `refactor:`, `docs:`, `chore:`, `ci:`, `test:`, `build:`, `style:` | hidden sections | none |
 
-Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
+Breaking changes: add `!` or a `BREAKING CHANGE:` footer → **patch** bump while
+we are on 0.x (pre-major SemVer, the same numbers release-please produced).
 `security:` is a NexNotes extension to stock config-conventional (see
 `commitlint.config.mjs`) — use it for vulnerability fixes.
 
@@ -58,9 +60,8 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 
 | File | Purpose |
 |---|---|
-| `release-please-config.json` | release type (node), changelog sections, PR title |
-| `.release-please-manifest.json` | current released version per package (root `.`) |
-| `.github/workflows/release.yml` | gate → release-please → build-linux + build-windows → publish |
+| `scripts/cut-release.mjs` | the cutter: semver from Conventional Commits, CHANGELOG section, version bump, tag, GitHub Release (`--dry-run` for a local preview) |
+| `.github/workflows/release.yml` | gate → cut-release → build-linux + build-windows → publish |
 | `commitlint.config.mjs` | allowed commit types (incl. `security`) |
 | `.husky/pre-commit`, `.husky/commit-msg` | local enforcement (activated by `prepare: husky`) |
 | `scripts/package-release.mjs` | portable server tar.gz + zip, version from package.json |
@@ -72,22 +73,19 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
 ## 4. Zero manual drift invariants
 
 1. **Never edit `CHANGELOG.md` by hand.** It is generated from commits; manual
-   edits are overwritten by the next release PR.
+   edits are overwritten by the next release.
 2. **Never hardcode versions.** The runtime version comes from
    `src/lib/version.ts` → `package.json`. The build reads the exact git tag
    (the artifacts job checks out the tag, not main).
-3. **Never bump `version` in package.json manually.** release-please does it in
-   the release PR. If you must force a version, use a
-   `Release-As: x.y.z` footer on one commit instead.
-   *(Until the §5 PR-permission setting is enabled, versions are cut manually:
-   a `chore(release): ...` commit bumping package.json + the manifest together,
-   then a `v*` tag. The manifest must move with the version or release-please
-   will propose the same bump twice once it works.)*
+3. **Never bump `version` in package.json manually.** `cut-release.mjs` does it
+   on main (root *and* `desktop/package.json` — the desktop manifest once
+   drifted to 0.0.1 while the app was on 0.0.4; the cutter now moves both
+   together). To preview a release locally: `node scripts/cut-release.mjs --dry-run`.
 
 ## 5. One-time repository settings (checklist)
 
 - [x] Conventional-commit enforcement active (husky + commitlint, verified locally)
-- [x] release-please config + manifest committed
+- [x] release cutter committed (`scripts/cut-release.mjs`, ex-release-please config removed)
 - [x] artifact pipeline verified (tarball, AppImage, Windows zip boot tests)
 - [x] desktop packaging rebuilt on Electron (2.2.0): AppImage boot-tested under
       Xvfb locally and in CI; Windows NSIS silent-installed + health-checked on
@@ -96,19 +94,14 @@ Breaking changes: add `!` or a `BREAKING CHANGE:` footer → major bump.
       (the per-user folder follows the sanitized *package* name —
       `nexnotes-desktop` — not the display name; the first tag build caught
       this when the smoke looked in `Programs\NexNotes` and found nothing)
-- [ ] **REQUIRED for release PRs (hit in practice, 2026-11-01):** the default
-      `GITHUB_TOKEN` cannot create pull requests until one of these is done:
-      1. Settings → Actions → General → Workflow permissions → check
-         **"Allow GitHub Actions to create and approve pull requests"**, or
-      2. store a fine-grained PAT with *Contents: read/write* +
-         *Pull requests: read/write* as the repo secret `RELEASE_PLEASE_TOKEN`
-         (the workflow already prefers it; a PAT also makes the release PR
-         trigger the other workflows, which the default token never can).
-      Until one of the two is done, `release-please` fails with
-      "GitHub Actions is not permitted to create or approve pull requests".
-      Note (2026-11-02): flipping the toggle *via API* needs a token with
-      *Administration: read/write* — the owner's fine-grained PAT used for
-      pushes does not carry it, so the toggle stays a manual step.
+- [x] ~~release PRs need "Allow GitHub Actions to create and approve pull
+      requests"~~ **obsolete (2026-11-05):** the release train no longer opens
+      PRs at all — `cut-release.mjs` commits the version bump straight to main
+      with `contents: write`, which the workflow already grants. The toggle
+      that kept failing every push is no longer part of the flow.
+- [x] release config migrated: `release-please-config.json` +
+      `.release-please-manifest.json` removed; `scripts/cut-release.mjs` owns
+      versioning now
 - [ ] **Codecov badge stays "unknown" until CODECOV_TOKEN exists:** Codecov
       retired tokenless uploads (the first run proved it — "Token required").
       Log into codecov.io with GitHub → copy the repo's upload token →
@@ -131,8 +124,8 @@ git tag v0.0.3 && git push origin v0.0.3
 #   SHA256SUMS, and publishes the GitHub Release.
 ```
 
-After that, merge `feat:`/`fix:` commits to main and release-please proposes
-the next version automatically.
+After that, merge `feat:`/`fix:` commits to main and the next push to main cuts
+the following version automatically.
 
 **v0.0.2 postmortem — the two quirks the first machine-tagged release hit
 (2026-11-04), kept here because both bite again the moment they're forgotten:**
@@ -157,7 +150,7 @@ the next version automatically.
 
 | Symptom | Cause / fix |
 |---|---|
-| Release PR never appears | Actions PR-creation setting disabled (see §5), or no `feat:`/`fix:` commits since last tag |
+| Release job exits "nothing to release" | only `docs:`/`chore:`/`ci:` commits since last tag — that is green by design; add a `feat:`/`fix:` commit |
 | `commitlint` rejects your message locally | Use `type: subject` form — see §2 table |
 | "NSIS Error: Installer integrity check has failed" | Almost always a truncated download — re-download and verify against `nexnotes-v*-SHA256SUMS.txt` |
 | Windows smoke job fails | Check `prisma/schema.prisma` still lists `binaryTargets = ["native", "windows"]`; the boot test reads the port from `%APPDATA%\NexNotes\server.json` |

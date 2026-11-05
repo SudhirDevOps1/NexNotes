@@ -14,7 +14,7 @@
  *   2. pass --node-win <node.exe> to embed the Windows Node runtime so the
  *      zip / installer run without a system-wide Node install.
  *
- * The version always comes from package.json — release-please bumps it, so
+ * The version always comes from package.json — cut-release.mjs bumps it, so
  * artifact names can never drift from the tagged release.
  *
  * Usage: node scripts/package-release.mjs --standalone .next/standalone --out dist [--node-win path\to\node.exe]

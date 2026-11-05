@@ -28,32 +28,35 @@ on 2026-11-02 (see the first entry in [`CHANGELOG.md`](../CHANGELOG.md)). The ol
 > "instability is expected". Burning major numbers for every schema tweak would
 > make the number meaningless — exactly the mistake the 2.x line made.
 
-## How releases happen (release-please)
+## How releases happen (cut-release)
 
 Versions are **never bumped by hand**. The train:
 
 1. Every commit must pass [`commitlint`](commitlint.config.mjs) (Conventional
    Commits: `feat:`, `fix:`, `docs:`, `chore:`, …) — husky enforces this locally,
    and the workflow gate enforces it on the PR.
-2. [`release-please`](https://github.com/googleapis/release-please) reads the
-   commits, opens/updates a release PR, and derives the next version:
-   - `bump-minor-pre-major: true` → `feat:` bumps the **minor** (not the major)
-     while we are on 0.x
-   - `bump-patch-for-minor-pre-major: true` → `fix:` bumps only the **patch**
-3. Merging the release PR updates `package.json` + `CHANGELOG.md` and tags `v0.x.y`.
-4. The `v*` tag triggers `release.yml` (Electron installers + portable server,
-   boot-tested before publish) and `docker.yml` (multi-arch image to GHCR).
+2. [`scripts/cut-release.mjs`](../scripts/cut-release.mjs) — run by
+   `release.yml` after the quality gate — reads the commits since the last `v*`
+   tag and derives the next version with the pre-major rules:
+   - `feat:` bumps the **minor** while we are on 0.x (`bump-minor-pre-major`)
+   - `fix:` bumps only the **patch**
+   - `BREAKING CHANGE:` bumps the **patch** on 0.x (`bump-patch-for-minor-pre-major`)
+   - `docs:`/`chore:`/`ci:` commits never trigger a release (green no-op)
+3. The cutter commits `chore(main): release nexnotes v0.x.y` straight to main —
+   `package.json` + `desktop/package.json` + `CHANGELOG.md` — tags `v0.x.y` and
+   opens the GitHub Release. No release PR, no repository toggles.
+4. The same run then builds from THAT tag: `release.yml` (Electron installers +
+   portable server, boot-tested before publish) and `docker.yml` (multi-arch
+   image to GHCR).
 
-State lives in [`.release-please-manifest.json`](../.release-please-manifest.json)
-(root, per-package current version) and the `release-please` job inside
-[`.github/workflows/release.yml`](../.github/workflows/release.yml).
+Preview any release locally with `node scripts/cut-release.mjs --dry-run`.
 `CHANGELOG.md` is machine-generated — never edit it by hand.
 
 ## Where the version surfaces
 
 | Surface | Source of truth |
 |---|---|
-| `package.json` / `desktop/package.json` | release-please writes both on the release PR |
+| `package.json` / `desktop/package.json` | cut-release writes both in the release commit |
 | `/api/health`, `/api/nx/health` | `APP_VERSION` from `src/lib/version.ts` (imports `package.json`) — a single source, no hardcoded copies |
 | App UI (sidebar chip, About) | the same `APP_VERSION` |
 | PWA manifest, Electron builder | read `package.json` at build time |
