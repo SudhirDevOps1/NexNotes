@@ -1,6 +1,6 @@
 {
   "name": "nexnotes-desktop",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "private": true,
   "description": "NexNotes desktop shell — wraps the Next.js standalone server in a real desktop window",
   "author": "SudhirDevOps1",
