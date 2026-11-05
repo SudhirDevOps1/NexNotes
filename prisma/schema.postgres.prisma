@@ -1,18 +1,16 @@
-// NexNotes — Postgres / Neon driver (serverless-ready)
-// Switch to this driver with:  node scripts/db-switch.mjs postgres "postgresql://user:pass@ep-xxx.neon.tech/nexnotes?sslmode=require"
-// Switch back with:            node scripts/db-switch.mjs sqlite
-// NOTE: kept in sync with schema.sqlite.prisma — same models, postgres types.
-
+// NexNotes — Postgres / Neon driver mirror (GENERATED — do not hand-edit).
+// Regenerate after every schema.prisma change:  npm run db:mirror
+// (a parity unit test fails CI when this file drifts from the active schema.)
 generator client {
   provider = "prisma-client-js"
-  // keep in sync with schema.prisma — windows engine for the release bundle
+  // windows engine rides along so the standalone bundle (release artifacts)
+  // boots on Windows too — the release workflow smoke-tests exactly that.
   binaryTargets = ["native", "windows"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -23,10 +21,11 @@ model User {
   // version they were minted with, so pre-rotation cookies die everywhere.
   pwVersion         Int      @default(0)
   encryptionEnabled Boolean  @default(false)
-  // v2.0 — account two-factor auth (TOTP, RFC 6238)
+  // v2.0 — account two-factor auth (TOTP, RFC 6238). Secret is stored server-side
+  // (self-hosted instance); backup codes are stored only as bcrypt hashes.
   twofaSecret       String?
   twofaEnabled      Boolean  @default(false)
-  twofaBackupHash   String?
+  twofaBackupHash   String? // comma-joined bcrypt hashes
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -38,7 +37,7 @@ model User {
 }
 
 model Folder {
-  id        String   @id
+  id        String   @id // client-generated UUID (local-first)
   userId    String
   name      String
   createdAt DateTime @default(now())
@@ -51,28 +50,28 @@ model Folder {
 }
 
 model Note {
-  id          String    @id
+  id          String    @id // client-generated UUID (local-first)
   userId      String
   title       String    @default("")
-  content     String    @default("") @db.Text
+  content     String    @default("") // plaintext, nxenc:v1 (E2E) or nxlock:v1 (note-password) ciphertext
   isEncrypted Boolean   @default(false)
   folderId    String?
   starred     Boolean   @default(false)
-  noteType    String    @default("markdown")
+  noteType    String    @default("markdown") // markdown | plain | task | checklist | code
   preventEdit Boolean   @default(false)
-  editorWidth String    @default("narrow")
-  locked      Boolean   @default(false)
-  lockHash    String?
-  conflictOf  String?
+  editorWidth String    @default("narrow") // narrow | medium | full
+  locked      Boolean   @default(false) // password-protected note (nxlock ciphertext)
+  lockHash    String?   // sha256 proof used to verify the note password locally
+  conflictOf  String?   // set when this note is a sync-conflict copy of another note
   pinned      Boolean   @default(false)
   archived    Boolean   @default(false)
   trashed     Boolean   @default(false)
-  // v2.0 — optional read-only public share link
+  // v2.0 — optional read-only public share link (Listed-style publishing, self-hosted)
   shareToken  String?   @unique
   shareEnabled Boolean  @default(false)
   trashedAt   DateTime?
   createdAt   DateTime
-  updatedAt   DateTime
+  updatedAt   DateTime // client-owned clock (LWW sync)
 
   user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   folder  Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
@@ -84,15 +83,16 @@ model Note {
   @@index([userId, conflictOf])
 }
 
-/// Version snapshots created automatically on pushed content changes.
+/// Version snapshots created automatically whenever a pushed edit changes the
+/// content of an existing note. Server stores ciphertext as-is (E2E safe).
 model NoteHistory {
   id          String   @id @default(cuid())
   userId      String
   noteId      String
   title       String   @default("")
-  content     String   @default("") @db.Text
+  content     String   @default("")
   isEncrypted Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) // time the version was replaced
 
   note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
@@ -101,12 +101,12 @@ model NoteHistory {
 
 /// Attachments kept in a per-account file library ("Files" view).
 model FileItem {
-  id          String   @id
+  id          String   @id // client-generated UUID (local-first)
   userId      String
   name        String
   mime        String   @default("application/octet-stream")
   size        Int      @default(0)
-  data        String   @default("") @db.Text
+  data        String   @default("") // base64 bytes or nxenc ciphertext
   isEncrypted Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -117,7 +117,7 @@ model FileItem {
 }
 
 model Tag {
-  id        String   @id
+  id        String   @id // client-generated UUID (local-first)
   userId    String
   name      String
   createdAt DateTime @default(now())
@@ -140,10 +140,11 @@ model NoteTag {
   @@id([noteId, tagId])
 }
 
+/// Tombstones: lets other devices learn about deletions during incremental pull.
 model Deletion {
   id        String   @id @default(cuid())
   userId    String
-  itemType  String
+  itemType  String // note | folder | tag
   itemId    String
   deletedAt DateTime @default(now())
 
@@ -157,7 +158,7 @@ model ApiToken {
   userId     String
   name       String
   tokenHash  String    @unique
-  prefix     String
+  prefix     String    // first chars for display, e.g. "nx_a1b2c3d4"
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
   revokedAt  DateTime?

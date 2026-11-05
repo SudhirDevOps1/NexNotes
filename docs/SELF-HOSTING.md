@@ -53,6 +53,39 @@ To go back to SQLite: `node scripts/db-switch.mjs sqlite`.
 Neon notes:
 - use the **pooled** connection string for the app; the script sets `DIRECT_URL` (direct) for `db push`
 - existing SQLite data doesn't migrate automatically — use Settings → Export JSON, switch, Import JSON
+- `db push` on an existing database refuses destructive changes on purpose; if you truly accept
+  data loss, run `npx prisma db push --accept-data-loss` yourself
+
+## 3b. Vercel (serverless, Neon Postgres)
+
+The build picks the Prisma driver from the environment — no schema editing:
+
+1. Push a Neon project (free tier works): copy the **pooled** connection string.
+2. On Vercel: import the repo (framework: Next.js), set env vars:
+   - `DATABASE_URL` = the Neon pooled URL (`postgresql://…`)
+   - `AUTH_SECRET` = a long random string (rotate-safe: rotating signs everyone out once)
+   - optional `DIRECT_URL` = the direct (non-pooled) URL, used by `db push` locally
+3. Deploy. At install/build time `scripts/pick-schema.mjs` sees the
+   `postgresql://` URL and generates the Postgres Prisma client automatically;
+   locally the committed schema stays SQLite and nothing changes.
+4. Create the tables once from your machine:
+   `DATABASE_URL="<pooled-url>" npx prisma db push` (or point `db-switch.mjs postgres` at it).
+
+Notes:
+- SQLite is not possible on Vercel — serverless functions have an ephemeral
+  filesystem, so a serverless target needs a real database (Neon/Supabase/RDS…).
+- The app itself stays local-first: clients cache everything in IndexedDB and
+  sync when the function is reachable; a cold start or brief outage just means
+  the sidebar chip reads "Offline — changes queued".
+
+## 3c. Cloudflare Pages (honest status)
+
+Cloudflare Pages can serve the cached PWA shell, but the Next.js API routes
+here run on the Node runtime (Prisma engine, bcrypt) — not the Workers runtime —
+so a full deploy on Cloudflare is **not supported yet**. The edge path is
+planned via Prisma driver adapters (`@prisma/adapter-neon`) — tracked in
+[PLAN-LOCAL-FIRST.md](PLAN-LOCAL-FIRST.md) Phase 2. Until then, use Vercel,
+Render, Railway, Fly.io or any Node host; all first-class.
 
 ## 4. Reverse proxy (HTTPS)
 
