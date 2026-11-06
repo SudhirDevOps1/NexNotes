@@ -3,6 +3,13 @@
 All notable changes to NexNotes. Format: [Keep a Changelog](https://keepachangelog.com) ·
 Versioning: [SemVer](https://semver.org).
 
+## [0.4.1](https://github.com/SudhirDevOps1/NexNotes/compare/v0.4.0...v0.4.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **docker:** ship scripts/ in the deps stage so the postinstall hook can run ([257d2ca](https://github.com/SudhirDevOps1/NexNotes/commit/257d2ca983fb7a2f765ec26c3dd04f3ac7096443))
+
 ## [0.4.0](https://github.com/SudhirDevOps1/NexNotes/compare/v0.3.0...v0.4.0) (2026-11-05)
 
 
