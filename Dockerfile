@@ -5,6 +5,11 @@
 FROM oven/bun:1 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
+# the root package runs scripts/postinstall.mjs on install — the script dir
+# must be here or bun dies with "Module not found" before its own skip-logic
+# gets a chance (this is what broke the v0.4.0 tag build). Both steps it runs
+# degrade to warnings when their inputs (prisma/, env) aren't there yet.
+COPY scripts ./scripts
 RUN bun install --frozen-lockfile
 
 FROM oven/bun:1 AS builder
