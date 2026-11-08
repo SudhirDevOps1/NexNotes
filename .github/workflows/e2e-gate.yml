@@ -27,7 +27,7 @@ jobs:
       DATABASE_URL: "file:${{ github.workspace }}/db/e2e.db"
       AUTH_SECRET: ci-e2e-secret-not-for-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: step-security/harden-runner@v2
         with:

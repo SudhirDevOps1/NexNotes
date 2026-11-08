@@ -53,7 +53,7 @@ jobs:
       DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
       AUTH_SECRET: release-build-secret-not-for-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: step-security/harden-runner@v2
         with:
@@ -99,7 +99,7 @@ jobs:
       releases_created: ${{ steps.cut.outputs.releases_created }}
       tag_name: ${{ steps.cut.outputs.tag_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # full history + tags: the cutter diffs Conventional Commits
           # against the last v* tag
@@ -138,7 +138,7 @@ jobs:
       DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
       AUTH_SECRET: release-build-secret-not-for-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # release path: the exact tag cut-release just created;
           # manual path: the pushed v* tag. Builds never run off main.
@@ -253,7 +253,7 @@ jobs:
       DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
       AUTH_SECRET: release-build-secret-not-for-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.cut-release.outputs.tag_name || github.ref }}
 
@@ -347,7 +347,7 @@ jobs:
       # make-sums.mjs lives in the repo and the first v2.2.0 tag build proved
       # the publish job dies on its first line without it — a shallow checkout
       # is cheaper than inlining the checksum format into the workflow
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:

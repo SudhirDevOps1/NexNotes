@@ -28,7 +28,7 @@ jobs:
       DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
       AUTH_SECRET: ci-test-secret-not-for-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # supply-chain hygiene: flag unexpected egress from this job
       - uses: step-security/harden-runner@v2
@@ -120,7 +120,7 @@ jobs:
       DATABASE_URL: "file:${{ github.workspace }}/db/custom.db"
       AUTH_SECRET: ci-test-secret-not-for-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: step-security/harden-runner@v2
         with:
